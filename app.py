@@ -7061,6 +7061,22 @@ def echolink_edit_page():
             model["echolink"] = submitted_echolink
             echolink = submitted_echolink
 
+            modules = model.setdefault("modules", {})
+            module_names = [
+                name
+                for name in modules.get("enabled", [])
+                if name != "ModuleEchoLink"
+            ]
+
+            for required in ("ModuleHelp", "ModuleParrot"):
+                if required not in module_names:
+                    module_names.append(required)
+
+            if enabled:
+                module_names.append("ModuleEchoLink")
+
+            modules["enabled"] = module_names
+
             save_node_model(model)
 
             result = build_svxlink_configuration(

@@ -114,6 +114,82 @@ class ProtectedEditingTests(unittest.TestCase):
             restart=True,
         )
 
+    def test_echolink_menu_removes_and_restores_module(self):
+        model = {
+            "echolink": {
+                "enabled": True,
+                "callsign": "G4NAB-R",
+                "password": "existing-password",
+                "sysopname": "Chris",
+                "location": "[Svx] Newcastle",
+            },
+            "modules": {
+                "enabled": [
+                    "ModuleHelp",
+                    "ModuleParrot",
+                    "ModuleEchoLink",
+                    "ModuleMetarInfo",
+                ],
+            },
+        }
+
+        for enabled in (False, True, False):
+            with self.subTest(enabled=enabled):
+                def check_rebuild(saved_model, restart):
+                    self.assertTrue(restart)
+                    self.assertEqual(
+                        saved_model["echolink"]["enabled"],
+                        enabled,
+                    )
+                    names = saved_model["modules"]["enabled"]
+                    self.assertEqual(
+                        names.count("ModuleEchoLink"),
+                        1 if enabled else 0,
+                    )
+                    for required in (
+                        "ModuleHelp",
+                        "ModuleParrot",
+                        "ModuleMetarInfo",
+                    ):
+                        self.assertEqual(names.count(required), 1)
+                    return {"success": True}
+
+                with patch.object(
+                    dashboard,
+                    "load_node_model",
+                    return_value=model,
+                ), patch.object(
+                    dashboard,
+                    "save_node_model",
+                ) as save_mock, patch.object(
+                    dashboard,
+                    "build_svxlink_configuration",
+                    side_effect=check_rebuild,
+                ) as build_mock:
+                    with dashboard.app.test_request_context(
+                        "/edit/echolink",
+                        method="POST",
+                        data={
+                            "enabled": "yes" if enabled else "no",
+                            "callsign": "G4NAB-R",
+                            "password": "existing-password",
+                            "sysopname": "Chris",
+                            "location": "Newcastle",
+                        },
+                    ):
+                        dashboard.session["authorised"] = True
+                        response = dashboard.echolink_edit_page()
+
+                self.assertEqual(
+                    response.headers["Location"],
+                    "/edit/echolink?saved=1",
+                )
+                save_mock.assert_called_once_with(model)
+                build_mock.assert_called_once_with(
+                    model,
+                    restart=True,
+                )
+
     def test_invalid_metar_format_does_not_save_or_build(self):
 
         model = {
