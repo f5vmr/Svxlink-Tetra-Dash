@@ -99,7 +99,7 @@ def build_modules_line_for_node(node):
 
     modules = node.get("modules", {})
 
-    enabled = []
+    enabled = ["ModuleHelp","ModuleParrot",]
 
     if modules.get("echolink"):
         enabled.append("ModuleEchoLink")

@@ -2068,6 +2068,11 @@ def port_modules_page():
             "echolink_port": echolink_port,
             "metar_ports": metar_ports,
         }
+        model.setdefault("echolink", {})
+        model["echolink"]["enabled"] = echolink_port is not None
+
+        model.setdefault("metar", {})
+        model["metar"]["enabled"] = bool(metar_ports)
 
         model.setdefault("build", {})
         model["build"]["port_modules_configured"] = True
@@ -4402,6 +4407,19 @@ def modules_page():
     reconfigure = (
         request.values.get("reconfigure") == "1"
     )
+    if is_multiport_build(model):
+        route_arguments = {}
+
+        if reconfigure:
+            route_arguments["reconfigure"] = "1"
+
+        return redirect(
+            url_for(
+                "port_modules_page",
+                **route_arguments,
+            )
+        )
+
 
     if request.method == "POST":
 

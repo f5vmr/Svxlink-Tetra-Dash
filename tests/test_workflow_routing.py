@@ -583,6 +583,99 @@ class WorkflowRoutingTests(unittest.TestCase):
             ]
         )
 
+    def test_modules_reconfiguration_routes_to_port_modules(self):
+        for profile, ports in (
+            ("ics_1x", ["1"]),
+            ("dual_usb", ["1", "2"]),
+        ):
+            with self.subTest(profile=profile):
+                model = self.multiport_model()
+                model["hardware_profile_id"] = profile
+                model["ports"]["enabled"] = ports
+
+                with patch.object(
+                    dashboard, "load_node_model", return_value=model
+                ), patch.object(
+                    dashboard, "save_node_model"
+                ) as save:
+                    with dashboard.app.test_request_context(
+                        "/modules?reconfigure=1"
+                    ):
+                        response = dashboard.modules_page()
+
+                self.assertEqual(
+                    response.headers["Location"],
+                    "/port-modules?reconfigure=1",
+                )
+                save.assert_not_called()
+
+    def test_port_modules_remove_restore_and_move_optional_modules(self):
+        model = self.multiport_model()
+        model["metar"]["startdefault"] = "KMCO"
+        model["echolink"]["callsign"] = "G4NAB-R"
+
+        for echolink_port, metar_ports in (
+            ("1", ["1"]),
+            ("none", []),
+            ("2", ["2"]),
+        ):
+            with self.subTest(
+                echolink_port=echolink_port,
+                metar_ports=metar_ports,
+            ):
+                with patch.object(
+                    dashboard, "load_node_model", return_value=model
+                ), patch.object(
+                    dashboard, "save_node_model"
+                ) as save:
+                    with dashboard.app.test_request_context(
+                        "/port-modules",
+                        method="POST",
+                        data={
+                            "reconfigure": "1",
+                            "echolink_port": echolink_port,
+                            "metar_ports": metar_ports,
+                        },
+                    ):
+                        response = dashboard.port_modules_page()
+
+                self.assertEqual(response.headers["Location"], "/build")
+                save.assert_called_once_with(model)
+
+                self.assertEqual(
+                    model["echolink"]["enabled"],
+                    echolink_port != "none",
+                )
+                self.assertEqual(
+                    model["metar"]["enabled"],
+                    bool(metar_ports),
+                )
+                self.assertEqual(
+                    model["echolink"]["callsign"], "G4NAB-R"
+                )
+                self.assertEqual(
+                    model["metar"]["startdefault"], "KMCO"
+                )
+
+                enabled = model["modules"]["enabled"]
+                self.assertEqual(
+                    "ModuleEchoLink" in enabled,
+                    echolink_port != "none",
+                )
+                self.assertEqual(
+                    "ModuleMetarInfo" in enabled,
+                    bool(metar_ports),
+                )
+
+                for port_id in ("1", "2"):
+                    self.assertEqual(
+                        model["nodes"][port_id]["modules"],
+                        {
+                            "echolink": port_id == echolink_port,
+                            "metar": port_id in metar_ports,
+                        },
+                    )
+
     def post_port_modules(self, model, reconfigure=False):
         form = {
             "echolink_port": "none",

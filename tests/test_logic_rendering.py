@@ -87,6 +87,46 @@ class LogicRenderingTests(unittest.TestCase):
             0,
         )
 
+    def test_port_logic_preserves_required_and_selected_modules(self):
+        cases = (
+            ({}, "MODULES=ModuleHelp,ModuleParrot"),
+            (
+                {"echolink": True},
+                "MODULES=ModuleHelp,ModuleParrot,ModuleEchoLink",
+            ),
+            (
+                {"metar": True},
+                "MODULES=ModuleHelp,ModuleParrot,ModuleMetarInfo",
+            ),
+            (
+                {"echolink": True, "metar": True},
+                "MODULES=ModuleHelp,ModuleParrot,ModuleEchoLink,ModuleMetarInfo",
+            ),
+            (
+                {"echolink": False, "metar": False},
+                "MODULES=ModuleHelp,ModuleParrot",
+            ),
+        )
+
+        for role in ("simplex", "repeater"):
+            for modules, expected in cases:
+                with self.subTest(role=role, modules=modules):
+                    model = new_node_model()
+                    node = {
+                        "role": role,
+                        "callsign": "G4NAB",
+                        "modules": modules,
+                    }
+
+                    with patch(
+                        "renderers.svxlink_renderer.render_config_template",
+                        return_value="rendered",
+                    ) as render:
+                        render_port_logic(model, "1", node)
+
+                    values = render.call_args[0][1]
+                    self.assertEqual(values["MODULES_LINE"], expected)
+
     def test_port_logic_uses_installation_courtesy(self):
         model = new_node_model()
         model["tones"]["courtesy_mode"] = "cw_k"
