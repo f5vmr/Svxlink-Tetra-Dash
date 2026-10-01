@@ -89,10 +89,38 @@ set_overlay() {
             ;;
     esac
 
-    if [ ! -f "$OVERLAY_DIR/$OVERLAY.dtbo" ]; then
-        echo "ERROR: Overlay file not found: $OVERLAY_DIR/$OVERLAY.dtbo"
-        exit 1
-    fi
+    (
+        SOURCE="/opt/dashboard/config/ics_overlay_sources/$OVERLAY.dts"
+
+        if [ ! -f "$SOURCE" ]; then
+            echo "ERROR: Overlay source not found: $SOURCE"
+            exit 1
+        fi
+
+        if ! command -v dtc >/dev/null 2>&1; then
+            echo "ERROR: dtc is missing. Install the device-tree-compiler package."
+            exit 1
+        fi
+
+        if [ ! -d "$OVERLAY_DIR" ]; then
+            echo "ERROR: Overlay destination not found: $OVERLAY_DIR"
+            exit 1
+        fi
+
+        TEMP_DTBO=$(mktemp)
+        trap 'rm -f -- "$TEMP_DTBO"' EXIT
+
+        echo "Compiling $SOURCE..."
+        dtc -@ -I dts -O dtb -o "$TEMP_DTBO" "$SOURCE"
+
+        if [ ! -s "$TEMP_DTBO" ]; then
+            echo "ERROR: Compiled overlay is empty."
+            exit 1
+        fi
+
+        install -m 0644 "$TEMP_DTBO" "$OVERLAY_DIR/$OVERLAY.dtbo"
+        echo "Installed $OVERLAY_DIR/$OVERLAY.dtbo"
+    )
 
     echo "Backing up $CONFIG to $CONFIG.svxlink-dash.bak"
     cp "$CONFIG" "$CONFIG.svxlink-dash.bak"
@@ -106,7 +134,12 @@ set_overlay() {
         -e '/^[[:space:]]*dtoverlay=ics-repeater/d' \
         "$CONFIG"
 
-    echo "dtoverlay=$OVERLAY" >> "$CONFIG"
+    {
+        echo
+        echo "[all]"
+        echo "# ICS overlay selected by SvxLink Dashboard"
+        echo "dtoverlay=$OVERLAY"
+    } >> "$CONFIG"
 
     install_asound_config "$OVERLAY"
 
@@ -154,9 +187,27 @@ configure_pcm1803_service() {
 
     case "$PROFILE" in
         ics_4x|ics_8x)
+            SCRIPT_SOURCE="/opt/dashboard/install/pcm1803_enable.py"
+            SERVICE_SOURCE="/opt/dashboard/install/pcm1803_enable.service"
+
+            for SOURCE in "$SCRIPT_SOURCE" "$SERVICE_SOURCE"; do
+                if [ ! -f "$SOURCE" ]; then
+                    echo "ERROR: Required PCM1803 file not found: $SOURCE"
+                    exit 1
+                fi
+            done
+
+            install -o root -g root -m 0755 \
+                "$SCRIPT_SOURCE" /usr/local/bin/pcm1803_enable.py
+
+            install -o root -g root -m 0644 \
+                "$SERVICE_SOURCE" "/etc/systemd/system/$SERVICE"
+
+            systemctl daemon-reload
+
             echo "Enabling PCM1803 service for $PROFILE..."
-            systemctl enable "$SERVICE"
-            echo "PCM1803 service enabled. It will run on the next boot."
+            systemctl enable --now "$SERVICE"
+            echo "PCM1803 service enabled and started."
             ;;
 
         ics_1x|ics_2x)

@@ -1035,6 +1035,11 @@ def ics_prepare_page():
     model = load_node_model()
     message = None
     error = None
+    try:
+        with open("/proc/sys/kernel/random/boot_id", encoding="ascii") as stream:
+            current_boot_id = stream.read().strip()
+    except OSError:
+        current_boot_id = None
 
     selected_profile = (
         model.get("hardware_profile_id")
@@ -1072,40 +1077,38 @@ def ics_prepare_page():
             result = set_overlay(selected_profile)
 
             if result["ok"]:
-                model.setdefault("build", {})
                 audio_result = configure_audio_boot(selected_profile)
-                
-                if not audio_result["ok"]:
+
+                model.setdefault("build", {})
+                model["build"]["resume_after_reboot"] = "/ics_prepare"
+
+                model.setdefault("ics_prepare", {})
+                model["ics_prepare"]["overlay_applied"] = selected_profile
+                model["ics_prepare"]["overlay_install_boot_id"] = current_boot_id
+                model["ics_prepare"]["reboot_required"] = True
+                model["ics_prepare"]["verified"] = False
+                model["ics_prepare"]["audio_boot_configured"] = audio_result["ok"]
+                save_node_model(model)
+
+                if audio_result["ok"]:
+                    message = (
+                        result["stdout"]
+                        or f"Overlay set for {selected_profile}. Reboot required before continuing."
+                    )
+                    if audio_result["stdout"]:
+                        message += "\n" + audio_result["stdout"]
+                else:
                     error = (
                         audio_result["stderr"]
                         or audio_result["stdout"]
                         or "Failed to configure ICS audio boot overlays."
                     )
-                else:
-                    message = (
-                        result["stdout"]
-                        or "Overlay applied. Reboot required before continuing."
-                    )
-                
-                    if audio_result["stdout"]:
-                        message += "\n" + audio_result["stdout"]                
-                model["build"]["resume_after_reboot"] = "/ics_prepare"
-
-                model.setdefault("ics_prepare", {})
-                model["ics_prepare"]["overlay_applied"] = selected_profile
-                model["ics_prepare"]["reboot_required"] = True
-                model["ics_prepare"]["verified"] = False
-                model["ics_prepare"]["audio_boot_configured"] = True
-                save_node_model(model)
-
-                message = (
-                    result["stdout"]
-                    or f"Overlay set for {selected_profile}. Reboot required before continuing."
-                )
-                if audio_result["stdout"]:
-                    message += "\n" + audio_result["stdout"]
             else:
-                error = result["stderr"] or result["stdout"] or "Failed to set ICS overlay."
+                error = (
+                    result["stderr"]
+                    or result["stdout"]
+                    or "Failed to set ICS overlay."
+                )
         elif action == "reboot":
             model.setdefault("build", {})
             model["build"]["resume_after_reboot"] = "/ics_prepare"
@@ -1124,16 +1127,28 @@ def ics_prepare_page():
         else:
             error = "Unknown action."
 
+    preparation = model.get("ics_prepare", {})
+    overlay_reboot_pending = (
+        "overlay_install_boot_id" in preparation
+        and (
+            not current_boot_id
+            or current_boot_id == preparation["overlay_install_boot_id"]
+        )
+    )
     status = build_ics_status(selected_profile)
+    model.setdefault("ics_prepare", {})
+    model["ics_prepare"]["verified"] = False
+
     if (
-        status.get("i2c")
+        not overlay_reboot_pending
+        and preparation.get("audio_boot_configured", False)
+        and status.get("selected_overlay_exists")
+        and status.get("current_overlay") == selected_profile
+        and status.get("i2c")
         and status["i2c"].get("ok")
         and status.get("gpio_names")
         and status["gpio_names"].get("ok")
     ):
-        model.setdefault("ics_prepare", {})
-        model["ics_prepare"]["reboot_required"] = False
-        model["ics_prepare"]["verified"] = True
 
         try:
             model = update_model_gpiod_discovery(model)
@@ -1172,8 +1187,12 @@ def ics_prepare_page():
         except Exception as exc:
             error = f"GPIOD discovery failed: {exc}"
 
-        if "build" in model and not error:
-            model["build"].pop("resume_after_reboot", None)
+        if not error:
+            model["ics_prepare"]["verified"] = True
+            model["ics_prepare"]["reboot_required"] = False
+
+            if "build" in model:
+                model["build"].pop("resume_after_reboot", None)
 
     save_node_model(model)
     return render_template(

@@ -101,8 +101,7 @@ fi
 
 apt update
 
-apt install -y git python3 python3-flask python3-jinja2 python3-werkzeug sox
-
+apt install -y git python3 python3-flask python3-jinja2 python3-werkzeug sox device-tree-compiler gpiod python3-libgpiod
 if [ ! -d /opt ]; then
     mkdir -p /opt
 fi

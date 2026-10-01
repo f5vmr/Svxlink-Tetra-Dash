@@ -1,0 +1,17 @@
+[Unit]
+Description=Enable PCM1803 ADCs on ICS 4X/8X Board
+After=local-fs.target systemd-udev-settle.service
+Before=svxlink.service
+ConditionPathExists=/usr/local/bin/pcm1803_enable.py
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/bin/pcm1803_enable.py
+Restart=on-failure
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target
+
+
