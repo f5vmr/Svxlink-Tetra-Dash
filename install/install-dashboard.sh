@@ -234,27 +234,22 @@ chmod +x "$INSTALL_DIR/install/fix-permissions.sh"
 ICS_HELPER_SOURCE="/opt/dashboard/install/svxlink_dashboard_ics_prepare"
 ICS_HELPER_DEST="/usr/local/sbin/svxlink_dashboard_ics_prepare"
 
-if [ ! -f "$ICS_HELPER_DEST" ]; then
-    echo "Installing SvxLink Dashboard ICS preparation helper..."
+echo "Installing or updating SvxLink Dashboard ICS preparation helper..."
 
-    if [ ! -f "$ICS_HELPER_SOURCE" ]; then
-        echo "ERROR: ICS preparation helper source not found:"
-        echo "       $ICS_HELPER_SOURCE"
-        exit 1
-    fi
-
-    install \
-        -o root \
-        -g root \
-        -m 0755 \
-        "$ICS_HELPER_SOURCE" \
-        "$ICS_HELPER_DEST"
-
-    echo "Installed $ICS_HELPER_DEST"
-else
-    echo "ICS preparation helper already installed:"
-    echo "  $ICS_HELPER_DEST"
+if [ ! -f "$ICS_HELPER_SOURCE" ]; then
+    echo "ERROR: ICS preparation helper source not found:"
+    echo "       $ICS_HELPER_SOURCE"
+    exit 1
 fi
+
+install \
+    -o root \
+    -g root \
+    -m 0755 \
+    "$ICS_HELPER_SOURCE" \
+    "$ICS_HELPER_DEST"
+
+echo "Installed or updated $ICS_HELPER_DEST"
 
 #-----------------------
 # NanoPi preparation stage

@@ -163,7 +163,7 @@
                         type="submit"
                         name="action"
                         value="set_overlay"
-                        {% if not status.helper_available or not status.selected_overlay_exists %}disabled{% endif %}
+                        {% if not status.helper_available %}disabled{% endif %}
                     >
                         Apply Selected ICS Overlay
                     </button>
@@ -263,7 +263,7 @@
                 </form>
             {% endif %}
             
-            {% if status.gpio_names and status.gpio_names.ok and not (model.ics_prepare and model.ics_prepare.reboot_required) %}
+            {% if model.ics_prepare and model.ics_prepare.verified and not model.ics_prepare.reboot_required %}
                 <a class="button-primary" href="{{ url_for('hardware_ports_page') }}">Continue</a>
             {% else %}
                 <button class="button-primary" type="button" disabled>Continue</button>
