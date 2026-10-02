@@ -18,6 +18,11 @@
                 while a repeater node is connected to a radio transmitter and receiver and can be used with a</br>
                 duplexer to operate on separate transmit and receive frequencies.</p>
                 <p>The node type can be changed later if needed, but the <b>callsign cannot be changed </b>after this step.</p>
+                <p>
+                    A TETRA node connects one TETRA radio through USB audio,
+                    a PEI serial connection and separate wired PTT.
+                    The radio's TETRA operating mode is selected on the next page.
+                </p>
             </div>
         </div>
 
@@ -32,15 +37,18 @@
             <div class="option-group">
                 <div class="radio-row">
                     <input type="radio" id="simplex" name="node_type" value="simplex"
-                           {% if model.node.type != 'repeater' %}checked{% endif %}>
+                           {% if model.node.type not in ['repeater', 'tetra'] %}checked{% endif %}>
                     <label for="simplex">Simplex node</label>
                 </div>
-
                 <div class="radio-row">
                     <input type="radio" id="repeater" name="node_type" value="repeater"
                            {% if model.node.type == 'repeater' %}checked{% endif %}>
                     <label for="repeater">Repeater node</label>
                 </div>
+                <div class="radio-row">
+                    <input type="radio" id="tetra" name="node_type" value="tetra"
+                           {% if model.node.type == 'tetra' %}checked{% endif %}>
+                    <label for="tetra">TETRA node</label>
             </div>
 
             <div class="field-group">

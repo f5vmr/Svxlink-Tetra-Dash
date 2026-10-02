@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" class="light-theme">
+<head>
+    <meta charset="UTF-8">
+    <title>TETRA Audio and PTT</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='site.css') }}">
+</head>
+<body>
+<main class="page">
+    <section class="card">
+        <h1>TETRA Audio and PTT</h1>
+
+        <p>
+            Select the USB audio paths and wired transmitter control.
+            Receive squelch is supplied by TetraLogic through PEI.
+        </p>
+
+        {% for error in errors %}
+            <p class="error">{{ error }}</p>
+        {% endfor %}
+
+        <form action="{{ url_for('tetra_interface_page', port_id=port_id) }}"
+              method="post">
+            {% if request.values.get("reconfigure") == "1" %}
+                <input type="hidden" name="reconfigure" value="1">
+            {% endif %}
+            {% if request.values.get("return_to") == "topology" %}
+                <input type="hidden" name="return_to" value="topology">
+            {% endif %}
+
+            <div class="form-section">
+                <div class="label">USB audio</div>
+
+                {% for field, label in [
+                    ("rx_audio", "Receive audio device"),
+                    ("tx_audio", "Transmit audio device")
+                ] %}
+                    <div class="status-box">
+                        <label for="{{ field }}">{{ label }}</label>
+                        <input id="{{ field }}"
+                               name="{{ field }}"
+                               type="text"
+                               value="{{ audio.get(field, '') }}"
+                               placeholder="alsa:plughw:CARD=Device,DEV=0"
+                               required>
+                    </div>
+                {% endfor %}
+
+                <div class="note">
+                    Select the actual interface sound card.
+                    The example above is not a detected device.
+                    Both paths currently use audio channel 0.
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="label">Wired PTT</div>
+
+                <label for="ptt_source">PTT interface</label>
+                <select id="ptt_source" name="ptt_source" required>
+                    <option value="">Select an interface</option>
+                    <option value="serial"
+                            {% if interface.get("ptt_source") == "serial" %}selected{% endif %}>
+                        Serial control pin
+                    </option>
+                    <option value="hidraw"
+                            {% if interface.get("ptt_source") == "hidraw" %}selected{% endif %}>
+                        Hidraw GPIO
+                    </option>
+                </select>
+
+                <div class="note">
+                    For an R1-2020 configured for serial control,
+                    select its USB serial device and the RTS pin.
+                    This device is separate from the radio's PEI connection.
+                </div>
+
+                <div id="serial_ptt">
+                    <div class="status-box">
+                        <label for="ptt_port">PTT serial device</label>
+                        <input id="ptt_port"
+                               name="ptt_port"
+                               type="text"
+                               value="{{ serial.get('ptt_port', '') }}"
+                               placeholder="/dev/serial/by-id/...">
+                    </div>
+
+                    <div class="status-box">
+                        <label for="ptt_pin">PTT pin expression</label>
+                        <select id="ptt_pin" name="ptt_pin">
+                            {% for pin in [
+                                "RTS", "!RTS", "DTR", "!DTR",
+                                "DTRRTS", "DTR!RTS", "!DTRRTS", "!DTR!RTS"
+                            ] %}
+                                <option value="{{ pin }}"
+                                        {% if serial.get("ptt_pin", "RTS") == pin %}selected{% endif %}>
+                                    {{ pin }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div id="hid_ptt">
+                    <div class="status-box">
+                        <label for="hid_device">HID device</label>
+                        <input id="hid_device"
+                               name="hid_device"
+                               type="text"
+                               value="{{ hidraw.get('device', '') }}"
+                               placeholder="/dev/hidraw0">
+                    </div>
+
+                    <div class="status-box">
+                        <label for="hid_ptt_pin">HID PTT pin</label>
+                        <select id="hid_ptt_pin" name="hid_ptt_pin">
+                            {% for pin in ["GPIO1", "GPIO2", "GPIO3", "GPIO4"] %}
+                                <option value="{{ pin }}"
+                                        {% if hidraw.get("ptt_pin", "GPIO3") == pin %}selected{% endif %}>
+                                    {{ pin }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <label>
+                        <input type="checkbox"
+                               name="hid_ptt_invert"
+                               value="1"
+                               {% if hidraw.get("ptt_invert") %}checked{% endif %}>
+                        Invert HID PTT
+                    </label>
+                </div>
+            </div>
+
+            <div class="button-row">
+                <a class="button-secondary"
+                   href="{{ url_for(
+                       'port_tetra_page',
+                       port_id=port_id,
+                       reconfigure=request.values.get('reconfigure'),
+                       return_to=request.values.get('return_to')
+                   ) }}">Back</a>
+                <button class="button-primary" type="submit">
+                    Save and Continue
+                </button>
+            </div>
+        </form>
+    </section>
+</main>
+
+<script>
+const source = document.getElementById("ptt_source");
+
+function updatePttControls() {
+    for (const [id, value] of [
+        ["serial_ptt", "serial"],
+        ["hid_ptt", "hidraw"]
+    ]) {
+        const section = document.getElementById(id);
+        const active = source.value === value;
+        section.hidden = !active;
+        section.querySelectorAll("input, select").forEach(control => {
+            control.disabled = !active;
+        });
+    }
+}
+
+source.addEventListener("change", updatePttControls);
+updatePttControls();
+</script>
+</body>
+</html>

@@ -9,6 +9,7 @@ from models.node_model import (
 )
 from renderers.template_engine import render_config_template
 from services.hardware_service import get_architecture_label
+from services.topology_ports import get_port_logic_name
 import platform
 from services.topology_ports import (
     get_topology_logic_name,
@@ -994,6 +995,54 @@ def render_active_logic(model):
 # =========================================================
 
 
+def render_tetra_logic(model, port_id, node):
+    """
+    Render the separate TETRA logic configuration.
+    """
+    tetra = node.get("tetra", {})
+    logic_name = get_port_logic_name(port_id, node)
+
+    ident = node.get("ident", {})
+    short_ident = ident.get("short", {})
+    long_ident = ident.get("long", {})
+
+    lines = [
+        f"[{logic_name}]",
+        "TYPE=Tetra",
+        f"RX=Rx{port_id}",
+        f"TX=Tx{port_id}",
+        build_modules_line_for_node(node),
+        f"CALLSIGN={node.get('callsign', '')}",
+        f"DEFAULT_LANG={get_default_language(model)}",
+        f"BAUD={tetra['baud']}",
+        f"PORT={tetra['pei_device']}",
+        f"ISSI={tetra['issi']}",
+        f"GSSI={tetra['gssi']}",
+        f"MNC={tetra['mnc']}",
+        f"MCC={tetra['mcc']}",
+        f"TETRA_MODE={tetra['mode']}",
+        f"PEI_INIT_FILE={tetra['pei_init_file']}",
+        f"SHORT_IDENT_INTERVAL={short_ident.get('interval', 15)}",
+        f"LONG_IDENT_INTERVAL={long_ident.get('interval', 60)}",
+        f"TIME_FORMAT={model.get('time_format', '24')}",
+        "EVENT_HANDLER=/usr/share/svxlink/events.tcl",
+        "RGR_SOUND_DELAY=0",
+        "MACROS=Macros",
+        f"FX_GAIN_NORMAL={model.get('fx_gain_normal', 0)}",
+        f"FX_GAIN_LOW={model.get('fx_gain_low', -12)}",
+        f"DTMF_CTRL_PTY=/dev/shm/port{port_id}_dtmf_ctrl",
+        f"END_CMD={tetra['end_cmd']}",
+    ]
+
+    online_control = render_online_control(
+        node.get("online_control", {})
+    )
+    if online_control:
+        lines.append(online_control)
+
+    return "\n".join(lines) + "\n"
+
+
 def render_port_logic(model, port_id, node):
     """
     Render one SimplexLogic or RepeaterLogic section for an ICS port.
@@ -1188,9 +1237,11 @@ def resolve_gpiod_line(model, node, label):
 
 def render_multiport_logic_sections(model):
     """
-    Render all radio logic sections for an explicit multi-port model.
-    """
+    List all enabled radio logics.
 
+    Conventional logic sections are embedded in the main file.
+    TETRA sections are rendered separately by the build service.
+    """
     nodes = model.get("nodes", {})
     enabled_ports = model.get("ports", {}).get("enabled", [])
 
@@ -1204,12 +1255,14 @@ def render_multiport_logic_sections(model):
         if not node:
             continue
 
-        logic_name = f"Port{port_id}Logic"
-
-        logic_names.append(logic_name)
-        logic_sections.append(
-            render_port_logic(model, port_id, node)
+        logic_names.append(
+            get_port_logic_name(port_id, node)
         )
+
+        if node.get("role") != "tetra":
+            logic_sections.append(
+                render_port_logic(model, port_id, node)
+            )
 
     return {
         "logics": ",".join(logic_names),
@@ -1244,8 +1297,10 @@ def render_port_rx_section(model, port_id, node):
         f"DEEMPHASIS={1 if audio.get('deemphasis', False) else 0}",
     ]
 
-    if method == "hidraw":
-        hidraw = node.get("hidraw", {})
+    if node.get("role") == "tetra":
+        lines.append("SQL_DET=TETRA_SQL")
+
+    elif method == "hidraw":
 
         try:
             hidraw_index = int(port_id) - 1
@@ -1653,7 +1708,10 @@ def get_primary_logic_name(model):
     primary_port_id = get_primary_port_id(model)
 
     if primary_port_id is not None:
-        return f"Port{primary_port_id}Logic"
+        return get_port_logic_name(
+            primary_port_id,
+            model.get("nodes", {}).get(primary_port_id, {}),
+        )
 
     if model.get("node", {}).get("type") == "repeater":
         return "RepeaterLogic"

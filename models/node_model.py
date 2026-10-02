@@ -307,6 +307,28 @@ DEFAULT_MODEL = {
 }
 
 
+def new_tetra_configuration():
+    """
+    Return independent TETRA settings for one radio port.
+
+    Connection, baud, mode and ISSI require explicit configuration.
+    """
+    return {
+        "radio_model": "MTM5400",
+        "mode": None,
+        "pei_device": None,
+        "baud": None,
+        "issi": None,
+        "gssi": 1,
+        "mcc": 901,
+        "mnc": 16383,
+        "pei_init_file": "/etc/svxlink/pei-init.json",
+        "user_info_file": "/etc/svxlink/tetra_users.json",
+        "end_cmd": "ATH",
+        "configured": False,
+    }
+
+
 def new_node_model(platform=None):
     """
     Return a fresh node model.
@@ -341,12 +363,37 @@ def is_ics_multiport_model(model):
     )
 
 
+def has_tetra_port(model):
+    """
+    Return whether an enabled port has the TETRA role.
+    """
+    nodes = model.get("nodes", {})
+    roles = model.get("port_roles", {})
+
+    for port in model.get("ports", {}).get("enabled", []):
+        port_id = str(port)
+        role_entry = roles.get(port_id, {})
+        selected_role = (
+            role_entry.get("role")
+            if isinstance(role_entry, dict)
+            else role_entry
+        )
+
+        role = selected_role or nodes.get(port_id, {}).get("role")
+
+        if role == "tetra":
+            return True
+
+    return False
+
+
 def is_multiport_model(model):
     enabled_ports = model.get("ports", {}).get("enabled", [])
 
     return (
         is_ics_multiport_model(model)
         or len(enabled_ports) > 1
+        or has_tetra_port(model)
     )
 
 
@@ -639,6 +686,150 @@ def validate_ctcss_talkgroup_configuration(
     return errors
 
 
+def validate_tetra_configuration(configuration, label="TETRA"):
+    """
+    Validate the connection and identity settings for one TETRA port.
+    """
+    errors = []
+
+    if not isinstance(configuration, dict):
+        return [f"{label} settings are required."]
+
+    if configuration.get("mode") not in {
+        "TMO",
+        "DMO-RPT",
+        "DMO-MS",
+        "GATEWAY",
+    }:
+        errors.append(f"{label} operating mode is required.")
+
+    device = configuration.get("pei_device")
+    if (
+        not isinstance(device, str)
+        or not device.startswith("/dev/")
+        or device == "/dev/"
+        or any(character.isspace() for character in device)
+    ):
+        errors.append(
+            f"{label} PEI device must be a path under /dev/."
+        )
+
+    for field, description in (
+        ("baud", "baud rate"),
+        ("issi", "ISSI"),
+        ("gssi", "GSSI"),
+        ("mcc", "MCC"),
+        ("mnc", "MNC"),
+    ):
+        value = configuration.get(field)
+        if (
+            not isinstance(value, int)
+            or isinstance(value, bool)
+            or value <= 0
+        ):
+            errors.append(
+                f"{label} {description} must be a positive integer."
+            )
+
+    return errors
+
+
+def validate_tetra_interface(node, label="TETRA"):
+    """
+    Require saved audio and independent wired PTT settings.
+    """
+    errors = []
+    audio = node.get("audio", {})
+    interface = node.get("interface", {})
+
+    if interface.get("configured") is not True:
+        errors.append(f"{label} audio and PTT must be configured.")
+
+    for field, description in (
+        ("rx_audio", "receive audio"),
+        ("tx_audio", "transmit audio"),
+    ):
+        value = audio.get(field)
+        if (
+            not isinstance(value, str)
+            or not value.startswith("alsa:")
+            or value == "alsa:"
+            or any(character.isspace() for character in value)
+        ):
+            errors.append(
+                f"{label} {description} must be an ALSA device."
+            )
+
+    source = interface.get("ptt_source")
+
+    if source == "serial":
+        serial = node.get("serial", {})
+        device = serial.get("ptt_port")
+
+        if (
+            not isinstance(device, str)
+            or not device.startswith("/dev/")
+            or device == "/dev/"
+            or any(character.isspace() for character in device)
+        ):
+            errors.append(f"{label} PTT serial device is required.")
+
+        if serial.get("ptt_pin") not in {
+            "RTS", "!RTS", "DTR", "!DTR",
+            "DTRRTS", "DTR!RTS", "!DTRRTS", "!DTR!RTS",
+        }:
+            errors.append(f"{label} serial PTT pin is invalid.")
+
+        if device and device == node.get(
+            "tetra", {}
+        ).get("pei_device"):
+            errors.append(
+                f"{label} PEI and serial PTT must use separate devices."
+            )
+
+    elif source == "hidraw":
+        hidraw = node.get("hidraw", {})
+        device = hidraw.get("device")
+
+        if (
+            not isinstance(device, str)
+            or not device.startswith("/dev/")
+            or device == "/dev/"
+            or any(character.isspace() for character in device)
+        ):
+            errors.append(f"{label} HID PTT device is required.")
+
+        if hidraw.get("ptt_pin") not in {
+            "GPIO1", "GPIO2", "GPIO3", "GPIO4",
+        }:
+            errors.append(f"{label} HID PTT pin is invalid.")
+
+    else:
+        errors.append(f"{label} wired PTT must be Serial or Hidraw.")
+
+    return errors
+
+
+def port_node_details_complete(node):
+    """
+    Require identity details and valid TETRA settings where applicable.
+    """
+    if not node.get("node_details_configured"):
+        return False
+
+    if node.get("role") != "tetra":
+        return True
+
+    tetra = node.get("tetra", {})
+
+    return (
+        isinstance(tetra, dict)
+        and tetra.get("configured") is True
+        and not validate_tetra_configuration(tetra)
+        and not validate_tetra_interface(node)
+    )
+
+
 def validate_model(model):
     """
     Validate high-level model consistency.
@@ -668,11 +859,23 @@ def validate_model(model):
             port_id = str(port)
             node = nodes.get(port_id, {})
 
-            if node.get("role") not in ("simplex", "repeater"):
+            if node.get("role") not in ("simplex", "repeater", "tetra"):
                 errors.append(
-                    f"Port {port_id} type must be simplex or repeater."
+                    f"Port {port_id} type must be simplex, repeater, or TETRA."
                 )
-
+            if node.get("role") == "tetra":
+                errors.extend(
+                    validate_tetra_configuration(
+                        node.get("tetra"),
+                        label=f"Port {port_id} TETRA",
+                    )
+                )
+                errors.extend(
+                    validate_tetra_interface(
+                        node,
+                        label=f"Port {port_id} TETRA",
+                    )
+                )
             if not node.get("callsign"):
                 errors.append(
                     f"Port {port_id} callsign is required."

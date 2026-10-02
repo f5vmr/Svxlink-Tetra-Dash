@@ -71,6 +71,10 @@ from services.build_svxlink import (
 from models.node_model import (
     ctcss_talkgroup_selection_available,
     get_installation_tones,
+    has_tetra_port,
+    new_tetra_configuration,
+    validate_tetra_configuration,
+    port_node_details_complete,
     validate_ctcss_talkgroup_configuration,
 )
 ## Wifi
@@ -1345,6 +1349,7 @@ def is_multiport_build(model):
     return (
         profile_id in ("ics_1x","ics_2x", "ics_4x", "ics_8x")
         or len(enabled_ports) > 1
+        or has_tetra_port(model)
     )
 
 
@@ -1425,7 +1430,7 @@ def initialise_port_nodes(model, profile):
         else:
             role = role_entry or "simplex"
 
-        if role not in ("simplex", "repeater"):
+        if role not in ("simplex", "repeater", "tetra"):
             role = "simplex"
 
         mapping = dict(
@@ -1449,6 +1454,10 @@ def initialise_port_nodes(model, profile):
 
         node.setdefault("port", port)
         node["role"] = role
+        if role == "tetra":
+            tetra = node.setdefault("tetra", {})
+            for key, value in new_tetra_configuration().items():
+                tetra.setdefault(key, value)
         node.setdefault("enabled", True)
         node.setdefault("name", f"Port {port} {role.title()}")
         node.setdefault("callsign", None)
@@ -1646,7 +1655,9 @@ def port_config_page():
         nodes = model.get("nodes", {})
 
     all_ports_configured = bool(enabled_ports) and all(
-        nodes.get(str(port), {}).get("node_details_configured")
+        port_node_details_complete(
+            nodes.get(str(port), {})
+        )
         for port in enabled_ports
     )
 
@@ -1752,6 +1763,37 @@ def port_node_page(port_id):
 
             save_node_model(model)
 
+            enabled_ports = [
+                str(port)
+                for port in model.get("ports", {}).get("enabled", [])
+            ]
+
+            if enabled_ports == ["1"] and port_id == "1":
+                route_arguments = {}
+
+                if request.form.get("reconfigure") == "1":
+                    route_arguments["reconfigure"] = "1"
+
+                return redirect(
+                    url_for(
+                        "modules_page",
+                        **route_arguments,
+                    )
+                )
+
+            if enabled_ports == {"1"} and port_id == "1":
+                route_arguments = {}
+
+                if request.form.get("reconfigure") == "1":
+                    route_arguments["reconfigure"] = "1"
+
+                return redirect(
+                    url_for(
+                        "modules_page",
+                        **route_arguments,
+                    )
+                )
+
             return redirect_after_port_configuration(
                 "port_config_page"
             )
@@ -1763,6 +1805,213 @@ def port_node_page(port_id):
         node=node,
         error=error,
         version_info=get_version_info(),
+    )
+
+
+@app.route("/tetra-interface/<port_id>", methods=["GET", "POST"])
+def tetra_interface_page(port_id):
+    model = load_node_model()
+
+    enabled_ports = {
+        str(port)
+        for port in model.get("ports", {}).get("enabled", [])
+    }
+    node = model.get("nodes", {}).get(port_id)
+
+    if (
+        port_id not in enabled_ports
+        or not node
+        or node.get("role") != "tetra"
+    ):
+        return redirect(url_for("node_page"))
+
+    audio = dict(node.get("audio", {}))
+    interface = dict(node.get("interface", {}))
+    serial = dict(node.get("serial", {}))
+    hidraw = dict(node.get("hidraw", {}))
+    errors = []
+
+    if request.method == "POST":
+        for field in ("rx_audio", "tx_audio"):
+            audio[field] = request.form.get(field, "").strip()
+
+            if (
+                not audio[field].startswith("alsa:")
+                or audio[field] == "alsa:"
+                or any(character.isspace() for character in audio[field])
+            ):
+                errors.append(
+                    f"{field.replace('_', ' ').upper()} must be "
+                    "an ALSA device beginning with alsa:."
+                )
+
+        source = request.form.get("ptt_source", "").strip()
+        interface["ptt_source"] = source
+
+        if source == "serial":
+            serial["ptt_port"] = request.form.get(
+                "ptt_port", ""
+            ).strip()
+            serial["ptt_pin"] = request.form.get(
+                "ptt_pin", ""
+            ).strip().upper()
+
+            device = serial["ptt_port"]
+            if (
+                not device.startswith("/dev/")
+                or device == "/dev/"
+                or any(character.isspace() for character in device)
+            ):
+                errors.append(
+                    "PTT serial device must be a path under /dev/."
+                )
+
+            if serial["ptt_pin"] not in {
+                "RTS", "!RTS", "DTR", "!DTR",
+                "DTRRTS", "DTR!RTS", "!DTRRTS", "!DTR!RTS",
+            }:
+                errors.append("Please select a supported PTT pin expression.")
+
+            if device and device == node.get(
+                "tetra", {}
+            ).get("pei_device"):
+                errors.append(
+                    "PEI and serial PTT must use separate devices."
+                )
+
+        elif source == "hidraw":
+            hidraw["device"] = request.form.get(
+                "hid_device", ""
+            ).strip()
+            hidraw["ptt_pin"] = request.form.get(
+                "hid_ptt_pin", ""
+            ).strip().upper()
+            hidraw["ptt_invert"] = (
+                request.form.get("hid_ptt_invert") == "1"
+            )
+
+            device = hidraw["device"]
+            if (
+                not device.startswith("/dev/")
+                or device == "/dev/"
+                or any(character.isspace() for character in device)
+            ):
+                errors.append(
+                    "HID device must be a path under /dev/."
+                )
+
+            if hidraw["ptt_pin"] not in {
+                "GPIO1", "GPIO2", "GPIO3", "GPIO4",
+            }:
+                errors.append("Please select a supported HID PTT pin.")
+
+        else:
+            errors.append("Please select Serial or Hidraw PTT.")
+
+        if not errors:
+            interface["configured"] = True
+            node["audio"] = audio
+            node["interface"] = interface
+            node["serial"] = serial
+            node["hidraw"] = hidraw
+            save_node_model(model)
+
+            if enabled_ports == {"1"} and port_id == "1":
+                route_arguments = {}
+
+                if request.form.get("reconfigure") == "1":
+                    route_arguments["reconfigure"] = "1"
+
+                return redirect(
+                    url_for(
+                        "modules_page",
+                        **route_arguments,
+                    )
+                )
+
+            return redirect_after_port_configuration(
+                "port_config_page"
+            )
+
+    return render_template(
+        "tetra_interface.html",
+        port_id=port_id,
+        audio=audio,
+        interface=interface,
+        serial=serial,
+        hidraw=hidraw,
+        errors=errors,
+    )
+
+
+@app.route("/port-tetra/<port_id>", methods=["GET", "POST"])
+def port_tetra_page(port_id):
+    model = load_node_model()
+
+    enabled_ports = {
+        str(port)
+        for port in model.get("ports", {}).get("enabled", [])
+    }
+    node = model.get("nodes", {}).get(port_id)
+
+    if (
+        port_id not in enabled_ports
+        or not node
+        or node.get("role") != "tetra"
+    ):
+        return redirect(url_for("port_config_page"))
+
+    tetra = new_tetra_configuration()
+    tetra.update(node.get("tetra", {}))
+    errors = []
+
+    if request.method == "POST":
+        submitted = dict(tetra)
+        submitted["mode"] = request.form.get("mode", "").strip()
+        submitted["pei_device"] = request.form.get(
+            "pei_device", ""
+        ).strip()
+
+        for field in ("baud", "issi", "gssi", "mcc", "mnc"):
+            value = request.form.get(field, "").strip()
+            try:
+                submitted[field] = int(value)
+            except ValueError:
+                submitted[field] = None
+
+        errors = validate_tetra_configuration(
+            submitted,
+            label=f"Port {port_id} TETRA",
+        )
+
+        tetra = submitted
+
+        if not errors:
+            tetra["configured"] = True
+            node["tetra"] = tetra
+            save_node_model(model)
+
+            route_arguments = {"port_id": port_id}
+
+            if request.form.get("reconfigure") == "1":
+                route_arguments["reconfigure"] = "1"
+
+            if request.form.get("return_to") == "topology":
+                route_arguments["return_to"] = "topology"
+
+            return redirect(
+                url_for(
+                    "tetra_interface_page",
+                    **route_arguments,
+                )
+            )
+
+    return render_template(
+        "port_tetra.html",
+        port_id=port_id,
+        node=node,
+        tetra=tetra,
+        errors=errors,
     )
 
 
@@ -3736,8 +3985,12 @@ def node_page():
             request.form.get("tx_delay"),
         )
 
-        if node_type not in ("simplex", "repeater"):
-            error = "Please select Simplex or Repeater."
+        if node_type not in ("simplex", "repeater", "tetra"):
+            error = "Please select Simplex, Repeater or TETRA."
+        elif node_type == "tetra" and len(
+            model.get("ports", {}).get("enabled", [])
+        ) > 1:
+            error = "The single TETRA setup requires one enabled radio port."
         elif not callsign:
             error = "Please enter a callsign."
         elif tx_delay_errors:
@@ -3753,6 +4006,60 @@ def node_page():
             model["audio"]["preemphasis"] = (
                 request.form.get("preemphasis") == "1"
             )
+
+            if node_type == "tetra":
+                node = dict(
+                    model.get("nodes", {}).get("1", {})
+                )
+                node.update({
+                    "port": "1",
+                    "role": "tetra",
+                    "enabled": True,
+                    "callsign": callsign,
+                    "tx_delay": tx_delay,
+                    "node_details_configured": True,
+                })
+                node.setdefault("name", "TETRA")
+
+                audio = dict(node.get("audio", {}))
+                audio["deemphasis"] = model["audio"]["deemphasis"]
+                audio["preemphasis"] = model["audio"]["preemphasis"]
+                node["audio"] = audio
+                node.setdefault("gpio", {})
+
+                tetra = new_tetra_configuration()
+                tetra.update(node.get("tetra", {}))
+                node["tetra"] = tetra
+
+                node.setdefault("modules", {
+                    "echolink": bool(
+                        model.get("echolink", {}).get("enabled")
+                    ),
+                    "metar": bool(
+                        model.get("metar", {}).get("enabled")
+                    ),
+                })
+
+                model["ports"] = {"enabled": ["1"]}
+                model["port_roles"] = {
+                    "1": {"role": "tetra"},
+                }
+                model["nodes"] = {"1": node}
+                model.setdefault("installation", {})
+                model["installation"]["primary_port_id"] = "1"
+
+                save_node_model(model)
+
+                route_arguments = {"port_id": "1"}
+                if request.form.get("reconfigure") == "1":
+                    route_arguments["reconfigure"] = "1"
+
+                return redirect(
+                    url_for(
+                        "port_tetra_page",
+                        **route_arguments,
+                    )
+                )
 
             save_node_model(model)
             if request.form.get("reconfigure") == "1":
@@ -4407,7 +4714,16 @@ def modules_page():
     reconfigure = (
         request.values.get("reconfigure") == "1"
     )
-    if is_multiport_build(model):
+    enabled_ports = [
+        str(port)
+        for port in model.get("ports", {}).get("enabled", [])
+    ]
+    single_tetra = (
+        enabled_ports == ["1"]
+        and model.get("nodes", {}).get("1", {}).get("role") == "tetra"
+    )
+
+    if is_multiport_build(model) and not single_tetra:
         route_arguments = {}
 
         if reconfigure:
@@ -4445,6 +4761,15 @@ def modules_page():
         model["modules"]["enabled"] = modules
         model["echolink"]["enabled"] = echolink_enabled
         model["metar"]["enabled"] = metar_enabled
+        if single_tetra:
+            model["nodes"]["1"]["modules"] = {
+                "echolink": echolink_enabled,
+                "metar": metar_enabled,
+            }
+            model["modules_multi"] = {
+                "echolink_port": "1" if echolink_enabled else None,
+                "metar_ports": ["1"] if metar_enabled else [],
+            }
 
         save_node_model(model)
 
@@ -5236,9 +5561,45 @@ def node_info_page():
         if validation_errors:
             errors = validation_errors
         else:
+            enabled_ports = [
+                str(port)
+                for port in model.get("ports", {}).get("enabled", [])
+            ]
+            single_tetra = (
+                enabled_ports == ["1"]
+                and model.get("nodes", {}).get("1", {}).get("role")
+                == "tetra"
+            )
+
+            if single_tetra:
+                reflector_enabled = bool(
+                    model.get("reflector", {}).get("enabled")
+                )
+                reflector_link = dict(
+                    model.get("topology", {}).get("reflector_link", {})
+                )
+                reflector_link.update({
+                    "name": "LinkToReflector",
+                    "ports": ["1"] if reflector_enabled else [],
+                })
+                reflector_link.setdefault("default_active", True)
+                reflector_link.setdefault("timeout", 300)
+
+                model["topology"] = {
+                    "reflector_link": reflector_link,
+                    "local_links": [],
+                    "independent_ports": (
+                        [] if reflector_enabled else ["1"]
+                    ),
+                }
+                model.setdefault("installation", {})
+                model["installation"]["primary_port_id"] = "1"
+                model.setdefault("build", {})
+                model["build"]["topology_configured"] = True
+
             save_node_model(model)
 
-            if is_multiport_build(model):
+            if is_multiport_build(model) and not single_tetra:
                 return redirect(url_for("topology_page"))
 
             return redirect(url_for("review_page"))

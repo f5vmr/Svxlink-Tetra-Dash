@@ -1,6 +1,21 @@
 """Resolve topology radio identities without changing saved model structure."""
 
 
+from models.node_model import has_tetra_port
+
+
+def get_port_logic_name(port_id, node):
+    """Return the logic name for a radio stored in the per-port model."""
+    if node.get("role") == "tetra":
+        return (
+            "TetraLogic"
+            if str(port_id) == "1"
+            else f"TetraLogic{port_id}"
+        )
+
+    return f"Port{port_id}Logic"
+
+
 def get_topology_ports(model):
     """Return port ID -> logic name for established renderer configurations.
 
@@ -22,9 +37,13 @@ def get_topology_ports(model):
         raise ValueError("Radio-port IDs must be non-empty strings.")
     if len(set(enabled)) != len(enabled):
         raise ValueError("Enabled radio-port IDs must be unique.")
-    if is_ics or len(enabled) > 1:
+    if is_ics or len(enabled) > 1 or has_tetra_port(model):
+        nodes = model.get("nodes", {})
         return {
-            port: "Port{}Logic".format(port)
+            port: get_port_logic_name(
+                port,
+                nodes.get(port, {}),
+            )
             for port in enabled
         }
 

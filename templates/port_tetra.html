@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" class="light-theme">
+<head>
+    <meta charset="UTF-8">
+    <title>Port {{ port_id }} TETRA Settings</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='site.css') }}">
+    <link rel="icon"
+          href="{{ url_for('static', filename='svxlink.ico') }}">
+</head>
+<body>
+<main class="page">
+    <section class="card">
+        <h1>Port {{ port_id }} TETRA Settings</h1>
+
+        <p>
+            Configure the radio's PEI connection and TETRA identity.
+            Audio and wired PTT are configured separately.
+        </p>
+
+        {% for error in errors %}
+            <p class="error">{{ error }}</p>
+        {% endfor %}
+
+        <form action="{{ url_for('port_tetra_page', port_id=port_id) }}"
+              method="post">
+            {% if request.values.get("reconfigure") == "1" %}
+                <input type="hidden" name="reconfigure" value="1">
+            {% endif %}
+            {% if request.values.get("return_to") == "topology" %}
+                <input type="hidden" name="return_to" value="topology">
+            {% endif %}
+
+            <div class="form-section">
+                <div class="label">Radio connection</div>
+
+                <p>Radio: {{ tetra.radio_model }}</p>
+
+                <div class="status-box">
+                    <label for="mode">Operating mode</label>
+                    <select id="mode" name="mode" required>
+                        <option value="">Select a mode</option>
+                        {% for mode in ["TMO", "DMO-RPT", "DMO-MS", "GATEWAY"] %}
+                            <option value="{{ mode }}"
+                                    {% if tetra.mode == mode %}selected{% endif %}>
+                                {{ mode }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="status-box">
+                    <label for="pei_device">PEI serial device</label>
+                    <input id="pei_device"
+                           name="pei_device"
+                           type="text"
+                           value="{{ tetra.pei_device or '' }}"
+                           placeholder="/dev/serial0"
+                           required>
+                </div>
+
+                <div class="note">
+                    Use the serial connection to the radio's PEI.
+                    For a USB serial adapter, use its stable
+                    /dev/serial/by-id path where available.
+                    This is separate from the wired PTT connection.
+                </div>
+
+                <div class="status-box">
+                    <label for="baud">PEI baud rate</label>
+                    <input id="baud"
+                           name="baud"
+                           type="number"
+                           min="1"
+                           step="1"
+                           value="{{ tetra.baud if tetra.baud is not none else '' }}"
+                           required>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="label">TETRA identity</div>
+
+                {% for field, label in [
+                    ("issi", "ISSI"),
+                    ("gssi", "GSSI"),
+                    ("mcc", "MCC"),
+                    ("mnc", "MNC")
+                ] %}
+                    <div class="status-box">
+                        <label for="{{ field }}">{{ label }}</label>
+                        <input id="{{ field }}"
+                               name="{{ field }}"
+                               type="number"
+                               min="1"
+                               step="1"
+                               value="{{ tetra[field] if tetra[field] is not none else '' }}"
+                               required>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="button-row">
+                <a class="button-secondary"
+                   href="{{ url_for(
+                       'port_config_page',
+                       reconfigure=request.values.get('reconfigure')
+                   ) }}">Back</a>
+                <button class="button-primary" type="submit">
+                    Save and Continue
+                </button>
+            </div>
+        </form>
+    </section>
+</main>
+</body>
+</html>

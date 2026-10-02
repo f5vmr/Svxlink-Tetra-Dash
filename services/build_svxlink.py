@@ -36,6 +36,7 @@ from hw_platforms import (
 from renderers.svxlink_renderer import (
     render_svxlink_config,
     render_echolink_module,
+    render_tetra_logic,
     render_metar_module,
     get_primary_callsign,
 )
@@ -156,6 +157,22 @@ def render_all(model):
 # =====================================================
 
     rendered["svxlink.conf"] = render_svxlink_config(model)
+    tetra_sections = []
+    nodes = model.get("nodes", {})
+
+    for port in model.get("ports", {}).get("enabled", []):
+        port_id = str(port)
+        node = nodes.get(port_id, {})
+
+        if node.get("role") == "tetra":
+            tetra_sections.append(
+                render_tetra_logic(model, port_id, node)
+            )
+
+    if tetra_sections:
+        rendered["TetraLogic.conf"] = "\n\n".join(
+            tetra_sections
+        )
 
 # =====================================================
 # Optional module configurations
@@ -275,6 +292,7 @@ def deploy_rendered_files(rendered_files):
     # =====================================================
 
     for filename in (
+        "TetraLogic.conf",
         "ModuleEchoLink.conf",
         "ModuleMetarInfo.conf",
     ):

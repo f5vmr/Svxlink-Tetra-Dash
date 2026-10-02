@@ -8,6 +8,8 @@ import re
 from models.node_model import (
     validate_model,
     validate_squelch_configuration,
+    validate_tetra_configuration,
+    validate_tetra_interface,
 )
 from services.topology_ports import get_topology_ports
 
@@ -72,6 +74,58 @@ def get_incomplete_topology_ports(model):
         node = nodes.get(port_id, {})
         if not isinstance(node, dict):
             node = {}
+
+        if node.get("role") == "tetra":
+            callsign = node.get("callsign")
+            if (
+                not node.get("node_details_configured")
+                or not isinstance(callsign, str)
+                or not callsign.strip()
+            ):
+                incomplete.append({
+                    "port_id": port_id,
+                    "missing": "node_details_configured",
+                    "message": f"Port {port_id}: complete TETRA identity.",
+                    "endpoint": "node_page" if enabled == ["1"] else "port_node_page",
+                    "values": {} if enabled == ["1"] else {"port_id": port_id},
+                })
+
+            tetra = node.get("tetra", {})
+            tetra_errors = validate_tetra_configuration(
+                tetra,
+                label=f"Port {port_id} TETRA",
+            )
+            if (
+                not isinstance(tetra, dict)
+                or tetra.get("configured") is not True
+            ):
+                tetra_errors.append(
+                    f"Port {port_id}: save the TETRA connection settings."
+                )
+
+            for message in tetra_errors:
+                incomplete.append({
+                    "port_id": port_id,
+                    "missing": "tetra_configuration",
+                    "message": message,
+                    "endpoint": "port_tetra_page",
+                    "values": {"port_id": port_id},
+                })
+
+            for message in validate_tetra_interface(
+                node,
+                label=f"Port {port_id} TETRA",
+            ):
+                incomplete.append({
+                    "port_id": port_id,
+                    "missing": "tetra_interface",
+                    "message": message,
+                    "endpoint": "tetra_interface_page",
+                    "values": {"port_id": port_id},
+                })
+
+            continue
+
         for flag, label, endpoint, per_port in PORT_CONFIGURATION_STEPS:
             complete = bool(node.get(flag))
             if flag == "node_details_configured":
