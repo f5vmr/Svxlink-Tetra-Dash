@@ -70,7 +70,11 @@
         </div>
 
         <div class="button-row">
-            <a class="button-secondary" href="{{ url_for('port_profile_review_page') }}">Back</a>
+            {% if request.values.get("reconfigure") != "1" %}
+                <a class="button-secondary"
+                   href="{{ url_for('port_profile_review_page') }}">Back</a>
+            {% endif %}
+
             <a class="button-secondary"
                href="{{ url_for(
                    'port_squelch_page',
@@ -80,7 +84,11 @@
             </a>
 
             {% if all_ports_configured %}
-                <a class="button-primary" href="{{ url_for('port_squelch_complete_page') }}">Continue</a>
+                <a class="button-primary"
+                   href="{{ url_for(
+                       'port_squelch_complete_page',
+                       reconfigure='1' if request.values.get('reconfigure') == '1' else None
+                   ) }}">Continue</a>
             {% else %}
                 <button class="button-primary" type="button" disabled>Continue</button>
             {% endif %}

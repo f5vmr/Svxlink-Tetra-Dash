@@ -197,7 +197,9 @@
             </div>
 
             <div class="button-row">
-                <a class="button-secondary" href="{{ url_for('port_modules_page') }}">Back</a>
+                {% if request.values.get("reconfigure") != "1" %}
+                    <a class="button-secondary" href="{{ url_for('port_modules_page') }}">Back</a>
+                {% endif %}
                 <button class="button-primary" type="submit">Save and Continue</button>
             </div>
         </form>

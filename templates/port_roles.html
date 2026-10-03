@@ -32,6 +32,9 @@
         {% endif %}
 
         <form action="{{ url_for('port_roles_page') }}" method="post">
+            {% if request.values.get("reconfigure") == "1" %}
+                <input type="hidden" name="reconfigure" value="1">
+            {% endif %}
             <div class="form-section">
                 <div class="label">Enabled port roles</div>
 
@@ -71,8 +74,10 @@
             </div>
 
             <div class="button-row">
-                <a class="button-secondary" href="{{ url_for('timezone_page') }}">Back</a>
-                <button class="button-primary" type="submit">Continue</button>
+                {% if request.values.get("reconfigure") != "1" %}
+                    <a class="button-secondary"
+                       href="{{ url_for('timezone_page') }}">Back</a>
+                {% endif %}
             </div>
         </form>
     </section>

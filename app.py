@@ -1591,7 +1591,9 @@ def port_roles_page():
         model["nodes"] = nodes
         save_node_model(model)
 
-        return redirect(url_for("port_config_page"))
+        return redirect_after_port_configuration(
+            "port_config_page"
+        )
 
     return render_template(
         "port_roles.html",
@@ -1637,7 +1639,16 @@ def port_config_page():
 
         save_node_model(model)
 
-        return redirect(url_for("port_config_page"))
+        return redirect(
+            url_for(
+                "port_config_page",
+                reconfigure=(
+                    "1"
+                    if request.form.get("reconfigure") == "1"
+                    else None
+                ),
+            )
+        )
 
     nodes = model.get("nodes", {})
 
@@ -2049,7 +2060,9 @@ def port_profile_review_page():
 
         save_node_model(model)
 
-        return redirect(url_for("port_squelch_page"))
+        return redirect_after_port_configuration(
+            "port_squelch_page"
+        )
 
     return render_template(
         "port_profile_review.html",
@@ -2093,9 +2106,9 @@ def port_squelch_page():
 def port_squelch_complete_page():
     model = load_node_model()
 
-    hardware = model.get("hardware", {})
     nodes = model.get("nodes", {})
     enabled_ports = model.get("ports", {}).get("enabled", [])
+    reconfigure = request.args.get("reconfigure") == "1"
 
     if not is_multiport_build(model):
         return redirect(url_for("squelch_page"))
@@ -2106,12 +2119,19 @@ def port_squelch_complete_page():
     )
 
     if not all_ports_configured:
-        return redirect(url_for("port_squelch_page"))
+        return redirect(
+            url_for(
+                "port_squelch_page",
+                reconfigure="1" if reconfigure else None,
+            )
+        )
 
     model.setdefault("build", {})
     model["build"]["port_squelch_configured"] = True
-
     save_node_model(model)
+
+    if reconfigure:
+        return redirect(url_for("build_page"))
 
     return redirect(url_for("port_modules_page"))
 
