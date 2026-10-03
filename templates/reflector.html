@@ -113,7 +113,7 @@
 
             <div class="button-row">
                 <a class="button-secondary"
-                   href="{% if request.values.get('reconfigure') == '1' %}{{ url_for('reconfigure_page') }}{% elif is_multiport %}{{ url_for('installation_identity_page') }}{% else %}{{ url_for('modules_page') }}{% endif %}">
+                   href="{% if request.values.get('reconfigure') == '1' %}{{ url_for('reconfigure_page') }}{% elif is_multiport %}{{ url_for('port_repeater_page') }}{% else %}{{ url_for('modules_page') }}{% endif %}">
                     Back
                 </a>
 

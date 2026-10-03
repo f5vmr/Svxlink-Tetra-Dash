@@ -2592,7 +2592,7 @@ def port_cw_page():
         save_node_model(model)
 
         return redirect_after_port_configuration(
-            "courtesy_page"
+            "installation_identity_page"
         )
 
     return render_template(
@@ -2730,7 +2730,7 @@ def port_repeater_page():
             save_node_model(model)
 
             return redirect_after_port_configuration(
-                "installation_identity_page"
+                "reflector_page"
             )
 
     return render_template(
@@ -2794,7 +2794,7 @@ def installation_identity_page():
             if request.form.get("reconfigure") == "1":
                 return redirect(url_for("build_page"))
 
-            return redirect(url_for("reflector_page"))
+            return redirect(url_for("courtesy_page"))
 
     return render_template(
         "installation_identity.html",
@@ -4524,6 +4524,7 @@ def courtesy_page():
         ).strip()
 
         if courtesy_mode not in (
+            "none",
             "A",
             "D",
             "E",
@@ -7745,23 +7746,23 @@ def reconfigure_page():
     reconfigure_targets = [
         {
             "id": "environment",
-            "label": "Environment / Region",
+            "label": "Region and regional settings",
             "route": "environment_page",
-            "description": "Change the region/environment settings. The hardware platform is preserved.",
+            "description": "Change the installation's region and regional defaults.",
         },
         {
             "id": "timezone",
-            "label": "Timezone",
+            "label": "Local timezone",
             "route": "timezone_page",
-            "description": "Change the configured timezone.",
+            "description": "Change the timezone used by the installation.",
         },
         {
             "id": "modules",
-            "label": "Optional Modules",
+            "label": "EchoLink and Airport MetarInfo",
             "route": "modules_page",
             "description": (
-                "Change EchoLink and METAR module selections "
-                "and their associated settings."
+            "Enable or disable EchoLink and airport METAR reports. "
+            "For multiport installations, choose which ports use them."
             ),
         },
         {
@@ -7769,17 +7770,17 @@ def reconfigure_page():
             "label": "Reflector Connection",
             "route": "reflector_page",
             "description": (
-                "Change the reflector access route and "
-                "connection settings."
+                "Change the reflector server route and "
+                "connection protocols, and authentication settings."
             ),
         },
         {
             "id": "node_info",
-            "label": "Node Information / LocationInfo",
+            "label": "Published station information",
             "route": "node_info_edit_page",
             "description": (
-                "Change published node details and optional "
-                "SvxLink LocationInfo settings."
+                "Change published node details, location "
+                "and APRS reporting settings."
             ),
         },
     ]
@@ -7788,45 +7789,57 @@ def reconfigure_page():
         reconfigure_targets.extend([
             {
                 "id": "hardware_ports",
-                "label": "Enabled Hardware Ports",
+                "label": "Enabled or disable radio ports",
                 "route": "hardware_ports_page",
-                "description": "Change which hardware ports are enabled for this build.",
+                "description": "Change which physical radio ports the installation uses.",
             },
             {
                 "id": "port_roles",
-                "label": "Port Roles",
+                "label": "Simplex or Repeater operation",
                 "route": "port_roles_page",
-                "description": "Change whether each enabled port is simplex or repeater.",
+                "description": "Choose how each enabled radio port operates.",
             },
             {
                 "id": "port_config",
-                "label": "Port Configuration Menu",
+                "label": "Radio Port Identity and audio settings",
                 "route": "port_config_page",
-                "description": "Return to the multi-port configuration menu.",
+                "description": "Choose a port to change its callsign, name, "
+                "trasnmit delay or audio emphasis settings.",
+            },
+            {
+                "id": "port_squelch",
+                "label": "Receiver squelch / COS",
+                "route": "port_squelch_page",
+                "description": (
+                    "Choose a port to change receiver signal detection, "
+                    "COS polarity, PTT Polarity "
+                    "or CTCSS settings."
+                ),
             },
             {
                 "id": "installation_identity",
-                "label": "Primary Installation Port",
+                "label": "Primary port and Installation Callsign",
                 "route": "installation_identity_page",
                 "description": (
-                    "Select the primary port and callsign used to "
-                    "identify the complete installation."
+                    "Choose the port whose callsign identifies "
+                    "the complete installation."
                 ),
             },
             {
                 "id": "topology",
-                "label": "Port Link Topology",
+                "label": "Connections between ports and reflector",
                 "route": "topology_page",
                 "description": (
-                    "Change reflector membership, local links "
-                    "and independent port assignments."
+                    "Choose which ports connect to the reflector, "
+                    "link locally, or operate independently."
                 ),
             },
             {
                 "id": "port_final_review",
-                "label": "Multi-port Final Review",
+                "label": "Review all radio ports",
                 "route": "port_final_review_page",
-                "description": "Review the current multi-port model before rebuilding.",
+                "description": "Review the complete port model configuration "
+                "before applying saved settings.",
             },
         ])
 
@@ -7880,34 +7893,34 @@ def reconfigure_page():
         })
     reconfigure_targets.append({
         "id": "online_control",
-        "label": "Emergency DTMF Control",
+        "label": "DTMF online/offline control",
         "route": "online_control_page",
         "description": (
-            "Enable or disable private DTMF online/offline "
-            "commands for each radio logic."
+        "Set the private DTMF command used to take each radio logic "
+        "offline or bring it online."
         ),
     })
     reconfigure_targets.append({
         "id": "tones",
-        "label": "Installation Tones",
+        "label": "Shared courtesy and repeater tones",
         "route": "courtesy_page",
         "description": (
-            "Change the shared courtesy, idle and closedown "
-            "tone settings."
+            "Change courtesy tones across the installation, "
+            "and idle and closedown tones for repeater ports."
         ),
     })
     reconfigure_targets.extend([
         {
             "id": "build",
-            "label": "Build Configuration",
+            "label": "Apply saved settings",
             "route": "build_page",
-            "description": "Regenerate the active SvxLink configuration.",
+            "description": "Rebuild the SvxLink configuration using the saved settings.",
         },
         {
             "id": "full_reset",
-            "label": "Full Reset and Start Again",
+            "label": "Reset and start setup again",
             "route": "reconfigure_reset_page",
-            "description": "Archive the current node model and restart the setup wizard.",
+            "description": "Archive the current configuration and restart the setup wizard.",
         },
     ])
 

@@ -84,7 +84,7 @@
 
             <div class="button-row">
                 <a class="button-secondary"
-                   href="{% if request.args.get('reconfigure') == '1' %}{{ url_for('reconfigure_page') }}{% else %}{{ url_for('port_repeater_page') }}{% endif %}">
+                   href="{% if request.args.get('reconfigure') == '1' %}{{ url_for('reconfigure_page') }}{% else %}{{ url_for('port_cw_page') }}{% endif %}">
                     Back
                 </a>
 

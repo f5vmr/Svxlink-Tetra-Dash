@@ -189,5 +189,70 @@ class PortReconfigurationTests(unittest.TestCase):
                 save.assert_called_once_with(model)
 
 
+    def test_primary_port_save_precedes_shared_tones(self):
+        for reconfigure in (False, True):
+            with self.subTest(reconfigure=reconfigure):
+                model = {
+                    "hardware_profile_id": "ics_4x",
+                    "ports": {"enabled": ["1", "2"]},
+                    "nodes": {
+                        "1": {"callsign": "G4NAB-1"},
+                        "2": {"callsign": "G4NAB-2"},
+                    },
+                }
+                form = {"primary_port_id": "2"}
+                if reconfigure:
+                    form["reconfigure"] = "1"
+
+                with patch.object(
+                    dashboard, "load_node_model", return_value=model
+                ), patch.object(
+                    dashboard, "save_node_model"
+                ) as save:
+                    with dashboard.app.test_request_context(
+                        "/installation-identity",
+                        method="POST",
+                        data=form,
+                    ):
+                        response = dashboard.installation_identity_page()
+
+                self.assertEqual(
+                    model["installation"]["primary_port_id"], "2"
+                )
+                self.assertEqual(
+                    response.headers["Location"],
+                    "/build" if reconfigure else "/courtesy",
+                )
+                save.assert_called_once_with(model)
+
+
+    def test_reconfigure_menu_opens_port_squelch_with_flag(self):
+        model = {
+            "hardware": {"family": "ics"},
+            "hardware_profile_id": "ics_4x",
+            "ports": {"enabled": ["1", "2"]},
+            "nodes": {
+                "1": {"role": "simplex"},
+                "2": {"role": "repeater"},
+            },
+        }
+
+        with patch.object(
+            dashboard, "load_node_model", return_value=model
+        ):
+            with dashboard.app.test_request_context(
+                "/reconfigure",
+                method="POST",
+                data={"target": "port_squelch"},
+            ):
+                dashboard.session["authorised"] = True
+                response = dashboard.reconfigure_page()
+
+        self.assertEqual(
+            response.headers["Location"],
+            "/port-squelch?reconfigure=1",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
