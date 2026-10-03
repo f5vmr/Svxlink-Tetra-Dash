@@ -84,6 +84,25 @@ def is_cmedia_hidraw(
     return False
 
 
+def discover_cmedia_hidraw_devices(
+    dev_root="/dev",
+    sys_class_hidraw=SYS_CLASS_HIDRAW,
+):
+    """List connected C-Media HID devices for manual selection."""
+    return [
+        {
+            "device": str(device),
+            "label": f"C-Media PTT — {device.name}",
+        }
+        for device in sorted(Path(dev_root).glob("hidraw*"))
+        if device.exists()
+        and is_cmedia_hidraw(
+            device,
+            sys_class_hidraw=sys_class_hidraw,
+        )
+    ]
+
+
 def inspect_dual_usb_hardware(
     cards=None,
     hidraw_devices=EXPECTED_HIDRAW_DEVICES,

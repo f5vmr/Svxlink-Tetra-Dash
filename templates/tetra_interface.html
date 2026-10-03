@@ -41,15 +41,25 @@
                         <input id="{{ field }}"
                                name="{{ field }}"
                                type="text"
+                               list="tetra_audio_devices"
                                value="{{ audio.get(field, '') }}"
                                placeholder="alsa:plughw:CARD=Device,DEV=0"
                                required>
                     </div>
                 {% endfor %}
 
+                <datalist id="tetra_audio_devices">
+                    {% for device in audio_devices %}
+                        <option value="{{ device.audio_dev }}">
+                            {{ device.description }}
+                        </option>
+                    {% endfor %}
+                </datalist>
+
                 <div class="note">
-                    Select the actual interface sound card.
-                    The example above is not a detected device.
+                    Choose the interface's detected USB audio device,
+                    or enter an ALSA device manually.
+                    Receive and transmit normally use the same sound card.
                     Both paths currently use audio channel 0.
                 </div>
             </div>
@@ -71,9 +81,11 @@
                 </select>
 
                 <div class="note">
-                    For an R1-2020 configured for serial control,
-                    select its USB serial device and the RTS pin.
-                    This device is separate from the radio's PEI connection.
+                    For the established R1-2020 arrangement, select
+                    Hidraw GPIO and GPIO3 for PTT.
+                    The USB serial connection carries PEI data.
+                    Select the C-Media HID device belonging to the
+                    radio interface, or enter its path manually.
                 </div>
 
                 <div id="serial_ptt">
@@ -108,8 +120,16 @@
                         <input id="hid_device"
                                name="hid_device"
                                type="text"
+                               list="tetra_hid_devices"
                                value="{{ hidraw.get('device', '') }}"
                                placeholder="/dev/hidraw0">
+                        <datalist id="tetra_hid_devices">
+                            {% for device in hid_devices %}
+                                <option value="{{ device.device }}">
+                                    {{ device.label }}
+                                </option>
+                            {% endfor %}
+                        </datalist>
                     </div>
 
                     <div class="status-box">

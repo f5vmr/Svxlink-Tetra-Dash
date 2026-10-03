@@ -54,9 +54,18 @@
                     <input id="pei_device"
                            name="pei_device"
                            type="text"
+                           list="pei_serial_devices"
                            value="{{ tetra.pei_device or '' }}"
-                           placeholder="/dev/serial0"
+                           placeholder="/dev/serial/by-id/..."
                            required>
+
+                    <datalist id="pei_serial_devices">
+                        {% for device in serial_devices %}
+                            <option value="{{ device.device }}">
+                                {{ device.label }}
+                            </option>
+                        {% endfor %}
+                    </datalist>
                 </div>
 
                 <div class="note">

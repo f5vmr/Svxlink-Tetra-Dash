@@ -34,6 +34,7 @@ from services.svxlink_config_discovery import (
     discover_audio_sections,
 )
 
+from services.serial_discovery import discover_serial_devices
 from services.sound_calibration import (
     get_svxlink_service_state,
     stop_svxlink_for_calibration,
@@ -53,7 +54,9 @@ from services.hardware_profile_service import (
 )
 from services.dual_usb_service import (
     inspect_dual_usb_hardware,
+    discover_cmedia_hidraw_devices,
 )
+
 from services.model_store import (
     load_node_model,
     save_node_model,
@@ -1944,14 +1947,29 @@ def tetra_interface_page(port_id):
                 "port_config_page"
             )
 
+    audio_devices = [
+        card
+        for card in discover_sound_cards()
+        if (
+            card.get("has_capture")
+            and card.get("has_playback")
+            and "usb" in (
+                f"{card.get('name', '')} "
+                f"{card.get('description', '')}"
+            ).lower()
+        )
+    ]
+
     return render_template(
         "tetra_interface.html",
         port_id=port_id,
         audio=audio,
         interface=interface,
         serial=serial,
+        hid_devices=discover_cmedia_hidraw_devices(),
         hidraw=hidraw,
         errors=errors,
+        audio_devices=audio_devices,
     )
 
 
@@ -2021,6 +2039,7 @@ def port_tetra_page(port_id):
         "port_tetra.html",
         port_id=port_id,
         node=node,
+        serial_devices=discover_serial_devices(),
         tetra=tetra,
         errors=errors,
     )
