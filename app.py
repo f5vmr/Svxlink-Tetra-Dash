@@ -7789,7 +7789,7 @@ def reconfigure_page():
         reconfigure_targets.extend([
             {
                 "id": "hardware_ports",
-                "label": "Enabled or disable radio ports",
+                "label": "Enable or disable radio ports",
                 "route": "hardware_ports_page",
                 "description": "Change which physical radio ports the installation uses.",
             },
@@ -7804,7 +7804,7 @@ def reconfigure_page():
                 "label": "Radio Port Identity and audio settings",
                 "route": "port_config_page",
                 "description": "Choose a port to change its callsign, name, "
-                "trasnmit delay or audio emphasis settings.",
+                "transmit delay or audio emphasis settings.",
             },
             {
                 "id": "port_squelch",
