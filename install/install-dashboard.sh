@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eu
 
-REPO_URL="https://github.com/f5vmr/SvxLink-Dash-V4.0.git"
+REPO_URL="https://github.com/f5vmr/SvxLink-Tetra-Dash.git"
 STREAMER_REPO_URL="https://github.com/f5vmr/Svxlink-Streamer.git"
 
 INSTALL_DIR="/opt/dashboard"
