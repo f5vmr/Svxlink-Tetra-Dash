@@ -1055,7 +1055,7 @@ def render_port_logic(model, port_id, node):
     short_ident = ident.get("short", {})
     long_ident = ident.get("long", {})
 
-    cw = node.get("cw", {})
+    cw = model.get("cw", {})
     tones = get_installation_tones(model)
     repeater = node.get("repeater", {})
 

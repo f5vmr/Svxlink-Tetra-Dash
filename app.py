@@ -2536,7 +2536,7 @@ def port_ident_page():
             save_node_model(model)
 
             return redirect_after_port_configuration(
-                "port_cw_page"
+                "installation_identity_page"
             )
 
         except Exception as exc:
@@ -2554,73 +2554,27 @@ def port_ident_page():
 
 @app.route("/port-cw", methods=["GET", "POST"])
 def port_cw_page():
-    model = load_node_model()
+    """
+    Compatibility redirect for the former per-port CW page.
 
-    hardware = model.get("hardware", {})
-    nodes = model.get("nodes", {})
-    enabled_ports = model.get("ports", {}).get("enabled", [])
+    SvxLink uses one shared CW.tcl configuration, so CW amplitude,
+    pitch and speed are now configured installation-wide.
+    """
 
-    if not is_multiport_build(model):
-        return redirect(url_for("cw_page"))
+    reconfigure = (
+        request.args.get("reconfigure") == "1"
+        or request.form.get("reconfigure") == "1"
+    )
 
-    if not nodes:
-        return redirect(url_for("port_config_page"))
-
-    enabled_port_ids = [
-        str(port)
-        for port in enabled_ports
-    ]
-
-    if request.method == "POST":
-        for port_id in enabled_port_ids:
-            node = nodes.get(port_id, {})
-
-            amp = request.form.get(f"port_{port_id}_cw_amp", "-10").strip()
-            pitch = request.form.get(f"port_{port_id}_cw_pitch", "650").strip()
-            cpm = request.form.get(f"port_{port_id}_cw_cpm", "95").strip()
-
-            try:
-                amp_value = int(amp)
-            except ValueError:
-                amp_value = -10
-
-            try:
-                pitch_value = int(pitch)
-            except ValueError:
-                pitch_value = 650
-
-            try:
-                cpm_value = int(cpm)
-            except ValueError:
-                cpm_value = 95
-
-            node["cw"] = {
-                "amp": amp_value,
-                "pitch": pitch_value,
-                "cpm": cpm_value,
-            }
-
-            node["cw_configured"] = True
-            nodes[port_id] = node
-
-        model["nodes"] = nodes
-
-        model.setdefault("build", {})
-        model["build"]["port_cw_configured"] = True
-
-        save_node_model(model)
-
-        return redirect_after_port_configuration(
-            "installation_identity_page"
+    if reconfigure:
+        return redirect(
+            url_for(
+                "cw_page",
+                reconfigure="1",
+            )
         )
 
-    return render_template(
-        "port_cw.html",
-        model=model,
-        nodes=nodes,
-        enabled_ports=enabled_ports,
-        version_info=get_version_info(),
-    )
+    return redirect(url_for("cw_page"))
 
 
 @app.route("/port-courtesy", methods=["GET", "POST"])
@@ -2813,7 +2767,7 @@ def installation_identity_page():
             if request.form.get("reconfigure") == "1":
                 return redirect(url_for("build_page"))
 
-            return redirect(url_for("courtesy_page"))
+            return redirect(url_for("cw_page"))
 
     return render_template(
         "installation_identity.html",
@@ -3846,7 +3800,6 @@ def port_final_review_page():
         "node_details_configured",
         "squelch_configured",
         "ident_configured",
-        "cw_configured",
         "repeater_configured",
     ]
 
@@ -4499,6 +4452,7 @@ def cw_page():
         "cw.html",
         model=model,
         error=error,
+        is_multiport=is_multiport_build(model),
     )
     
 
@@ -4532,15 +4486,19 @@ def courtesy_page():
             "",
         ).strip()
 
-        idle_mode = request.form.get(
-            "idle_mode",
-            "",
-        ).strip()
+        if has_repeater:
+            idle_mode = request.form.get(
+                "idle_mode",
+                "",
+            ).strip()
 
-        closedown_mode = request.form.get(
-            "closedown_mode",
-            "",
-        ).strip()
+            closedown_mode = request.form.get(
+                "closedown_mode",
+                "",
+            ).strip()
+        else:
+            idle_mode = "silence"
+            closedown_mode = "none"
 
         if courtesy_mode not in (
             "none",
@@ -4559,14 +4517,14 @@ def courtesy_page():
         ):
             error = "Please select a valid courtesy tone."
 
-        elif idle_mode not in (
+        elif has_repeater and idle_mode not in (
             "chime",
             "pip",
             "silence",
         ):
             error = "Please select a valid idle tone."
 
-        elif closedown_mode not in (
+        elif has_repeater and closedown_mode not in (
             "none",
             "biboop",
             "va",

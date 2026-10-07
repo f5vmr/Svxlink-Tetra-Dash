@@ -18,7 +18,6 @@ PORT_CONFIGURATION_STEPS = (
     ("node_details_configured", "node details", "port_node_page", True),
     ("squelch_configured", "squelch", "port_squelch_detail_page", True),
     ("ident_configured", "identification", "port_ident_page", False),
-    ("cw_configured", "CW settings", "port_cw_page", False),
     ("repeater_configured", "repeater settings", "port_repeater_page", False),
 )
 

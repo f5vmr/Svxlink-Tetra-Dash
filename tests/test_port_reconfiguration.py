@@ -221,7 +221,7 @@ class PortReconfigurationTests(unittest.TestCase):
                 )
                 self.assertEqual(
                     response.headers["Location"],
-                    "/build" if reconfigure else "/courtesy",
+                    "/build" if reconfigure else "/cw",
                 )
                 save.assert_called_once_with(model)
 
@@ -252,6 +252,49 @@ class PortReconfigurationTests(unittest.TestCase):
             response.headers["Location"],
             "/port-squelch?reconfigure=1",
         )
+
+
+    def test_port_cw_redirects_to_shared_cw(self):
+        cases = (
+            (
+                "/port-cw",
+                {},
+                "/cw",
+            ),
+            (
+                "/port-cw?reconfigure=1",
+                {},
+                "/cw?reconfigure=1",
+            ),
+            (
+                "/port-cw",
+                {"reconfigure": "1"},
+                "/cw?reconfigure=1",
+            ),
+        )
+
+        for path, form, expected_location in cases:
+            with self.subTest(
+                path=path,
+                form=form,
+            ):
+                method = "POST" if form else "GET"
+
+                with dashboard.app.test_request_context(
+                    path,
+                    method=method,
+                    data=form,
+                ):
+                    response = dashboard.port_cw_page()
+
+                self.assertEqual(
+                    response.status_code,
+                    302,
+                )
+                self.assertEqual(
+                    response.headers["Location"],
+                    expected_location,
+                )
 
 
 if __name__ == "__main__":

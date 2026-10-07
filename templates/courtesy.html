@@ -134,7 +134,7 @@
                     CW pitch, speed and level.
                 </div>
             </div>
-
+            {% if has_repeater %}
             <div class="field-group">
                 <label class="label" for="idle_mode">
                     Repeater idle tone
@@ -180,10 +180,10 @@
                     </option>
                 </select>
             </div>
-
+            {% endif %}
             <div class="button-row">
                 <a class="button-secondary"
-                   href="{% if request.args.get('reconfigure') == '1' %}{{ url_for('reconfigure_page') }}{% elif is_multiport %}{{ url_for('installation_identity_page') }}{% else %}{{ url_for('cw_page') }}{% endif %}">
+                   href="{% if request.args.get('reconfigure') == '1' %}{{ url_for('reconfigure_page') }}{% else %}{{ url_for('cw_page') }}{% endif %}">
                     Back
                 </a>
 

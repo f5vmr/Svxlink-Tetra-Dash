@@ -525,5 +525,59 @@ class LogicRenderingTests(unittest.TestCase):
         )
 
 
+    def test_port_logic_uses_installation_wide_cw_settings(self):
+        model = new_node_model()
+        model["cw"] = {
+            "amp": -14,
+            "pitch": 725,
+            "cpm": 118,
+        }
+
+        node = {
+            "role": "simplex",
+            "callsign": "G4NAB-1",
+            "ident": {},
+            "modules": {},
+            "squelch": {},
+            "cw": {
+                "amp": -20,
+                "pitch": 500,
+                "cpm": 70,
+            },
+        }
+
+        captured = {}
+
+        def capture(template_name, values):
+            captured["template"] = template_name
+            captured["values"] = values
+            return "rendered"
+
+        with patch(
+            "renderers.svxlink_renderer."
+            "render_config_template",
+            side_effect=capture,
+        ):
+            result = render_port_logic(
+                model,
+                "1",
+                node,
+            )
+
+        self.assertEqual(result, "rendered")
+        self.assertEqual(
+            captured["values"]["CW_AMP"],
+            -14,
+        )
+        self.assertEqual(
+            captured["values"]["CW_PITCH"],
+            725,
+        )
+        self.assertEqual(
+            captured["values"]["CW_CPM"],
+            118,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -210,7 +210,7 @@ class TopologyCompletionTests(unittest.TestCase):
     def test_missing_node_routes_to_initialisation(self):
         self.model["nodes"] = {}
         issues = get_incomplete_topology_ports(self.model)
-        self.assertEqual(len(issues), 5)
+        self.assertEqual(len(issues), 4)
         self.assertTrue(all(issue["endpoint"] == "port_config_page" for issue in issues))
 
     def test_completed_flags_do_not_hide_missing_identity(self):

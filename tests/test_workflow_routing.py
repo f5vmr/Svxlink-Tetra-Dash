@@ -962,7 +962,6 @@ class WorkflowRoutingTests(unittest.TestCase):
                         "node_details_configured": True,
                         "squelch_configured": True,
                         "ident_configured": True,
-                        "cw_configured": True,
                         "repeater_configured": True,
                     })
 
@@ -1309,9 +1308,6 @@ class WorkflowRoutingTests(unittest.TestCase):
                 method="POST",
                 data={
                     "courtesy_mode": "R",
-                    "tone_frequency": "not-used",
-                    "idle_mode": "silence",
-                    "closedown_mode": "none",
                 },
             ):
                 response = dashboard.courtesy_page()
@@ -1324,6 +1320,14 @@ class WorkflowRoutingTests(unittest.TestCase):
         self.assertEqual(
             model["tones"]["courtesy_mode"],
             "R",
+        )
+        self.assertEqual(
+            model["tones"]["idle_mode"],
+            "silence",
+        )
+        self.assertEqual(
+            model["tones"]["closedown_mode"],
+            "none",
         )
         save_mock.assert_called_once_with(model)
 
@@ -1393,6 +1397,84 @@ class WorkflowRoutingTests(unittest.TestCase):
                     "CW",
                     template_text,
                 )
+
+    def test_courtesy_repeater_controls_follow_port_roles(self):
+        cases = (
+            (
+                {
+                    "hardware_profile_id": "ics_2x",
+                    "ports": {
+                        "enabled": ["1", "2"],
+                    },
+                    "nodes": {
+                        "1": {
+                            "role": "simplex",
+                        },
+                        "2": {
+                            "role": "simplex",
+                        },
+                    },
+                },
+                False,
+            ),
+            (
+                {
+                    "hardware_profile_id": "ics_2x",
+                    "ports": {
+                        "enabled": ["1", "2"],
+                    },
+                    "nodes": {
+                        "1": {
+                            "role": "simplex",
+                        },
+                        "2": {
+                            "role": "repeater",
+                        },
+                    },
+                },
+                True,
+            ),
+        )
+
+        for model, controls_expected in cases:
+            with self.subTest(
+                controls_expected=controls_expected,
+            ):
+                model["tones"] = {
+                    "courtesy_mode": "none",
+                    "courtesy_frequency": 800,
+                    "idle_mode": "silence",
+                    "closedown_mode": "none",
+                }
+
+                with patch.object(
+                    dashboard,
+                    "load_node_model",
+                    return_value=model,
+                ):
+                    with dashboard.app.test_request_context(
+                        "/courtesy",
+                    ):
+                        html = dashboard.courtesy_page()
+
+                if controls_expected:
+                    self.assertIn(
+                        'name="idle_mode"',
+                        html,
+                    )
+                    self.assertIn(
+                        'name="closedown_mode"',
+                        html,
+                    )
+                else:
+                    self.assertNotIn(
+                        'name="idle_mode"',
+                        html,
+                    )
+                    self.assertNotIn(
+                        'name="closedown_mode"',
+                        html,
+                    )
 
     def test_reconfiguration_back_links_return_to_menu(self):
         template_names = (
