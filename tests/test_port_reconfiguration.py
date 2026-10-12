@@ -69,6 +69,49 @@ class PortReconfigurationTests(unittest.TestCase):
                 save.assert_called_once_with(model)
 
 
+    def test_port_roles_page_has_continue_button(self):
+        with dashboard.app.test_request_context(
+            "/port-roles"
+        ):
+            html = dashboard.render_template(
+                "port_roles.html",
+                model={
+                    "hardware_profile_id": "ics_2x",
+                },
+                enabled_ports=["1", "2"],
+                port_roles={},
+                error=None,
+                version_info={
+                    "package": "test",
+                    "engine": "test",
+                },
+            )
+
+        self.assertIn(
+            'type="submit"',
+            html,
+        )
+        self.assertIn(
+            "Save roles and continue",
+            html,
+        )
+        self.assertIn(
+            "GPIO: GPIO26, TX_1",
+            html,
+        )
+        self.assertIn(
+            "GPIO: GPIO23, TX_2",
+            html,
+        )
+        self.assertNotIn(
+            "GPIO: RX_1",
+            html,
+        )
+        self.assertNotIn(
+            "GPIO: RX_2",
+            html,
+        )
+
     def test_port_roles_save_uses_correct_workflow(self):
         for reconfigure in (False, True):
             with self.subTest(reconfigure=reconfigure):
@@ -99,6 +142,55 @@ class PortReconfigurationTests(unittest.TestCase):
                     model["nodes"]["1"]["role"], "repeater"
                 )
                 save.assert_called_once_with(model)
+
+
+    def test_squelch_reconfiguration_saves_each_port_and_returns_to_list(self):
+        model = {
+            "hardware_profile_id": "ics_2x",
+            "hardware": {"family": "ics"},
+            "ports": {"enabled": ["1", "2"]},
+            "nodes": {
+                "1": {"gpio": {"cos_invert": False, "ptt_invert": False}},
+                "2": {"gpio": {"cos_invert": False, "ptt_invert": False}},
+            },
+        }
+
+        for port_id in ("1", "2"):
+            other_port = "2" if port_id == "1" else "1"
+            other_before = repr(model["nodes"][other_port])
+
+            with self.subTest(port_id=port_id):
+                with patch.object(
+                    dashboard, "load_node_model", return_value=model
+                ), patch.object(
+                    dashboard, "parse_squelch_form",
+                    return_value=({"method": "gpiod"}, []),
+                ), patch.object(
+                    dashboard, "save_node_model"
+                ) as save:
+                    with dashboard.app.test_request_context(
+                        f"/port-squelch/{port_id}",
+                        method="POST",
+                        data={
+                            "reconfigure": "1",
+                            "sql_gpio_invert": "yes",
+                            "ptt_gpio_invert": "yes",
+                        },
+                    ):
+                        response = dashboard.port_squelch_detail_page(port_id)
+
+                self.assertEqual(
+                    response.headers["Location"],
+                    "/port-squelch?reconfigure=1",
+                )
+                save.assert_called_once_with(model)
+                self.assertTrue(model["nodes"][port_id]["gpio"]["cos_invert"])
+                self.assertTrue(model["nodes"][port_id]["gpio"]["ptt_invert"])
+                self.assertTrue(model["nodes"][port_id]["squelch_configured"])
+                self.assertEqual(
+                    repr(model["nodes"][other_port]), other_before
+                )
+
 
     def test_squelch_completion_preserves_workflow(self):
         for configured in (False, True):

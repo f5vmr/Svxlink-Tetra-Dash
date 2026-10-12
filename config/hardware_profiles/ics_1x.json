@@ -3,7 +3,13 @@
   "name": "ICS-CTRLS 1X",
   "type": "port_based",
   "family": "ics",
-  "ports": 1,  
+  "ports": 1,
+    "port_map": {
+    "1": {
+      "rx_audio": "alsa:rx1",
+      "tx_audio": "alsa:tx1"
+    }
+  },
   "preparation": {
   "required": true,
   "requires_reboot": true,

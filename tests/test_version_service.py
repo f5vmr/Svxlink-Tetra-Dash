@@ -12,33 +12,33 @@ from services.version_service import (
 
 class VersionServiceTests(unittest.TestCase):
 
-    def test_dashboard_reports_version_4(self):
+    def test_dashboard_reports_version_4_1(self):
         self.assertEqual(
             get_dashboard_version(),
-            "4.0",
+            "4.1",
         )
         self.assertEqual(
             get_dashboard_name(),
-            "SvxLink-Dash-V4.0",
+            "SvxLink-Dash-V4.1",
         )
         self.assertEqual(
             get_dashboard_title(),
-            "SvxLink-Dash-V4.0",
+            "SvxLink-Dash-V4.1",
         )
 
         version_info = get_version_info()
 
         self.assertEqual(
             version_info["dashboard"],
-            "4.0",
+            "4.1",
         )
         self.assertEqual(
             version_info["dashboard_name"],
-            "SvxLink-Dash-V4.0",
+            "SvxLink-Dash-V4.1",
         )
         self.assertEqual(
             version_info["dashboard_title"],
-            "SvxLink-Dash-V4.0",
+            "SvxLink-Dash-V4.1",
         )
 
 

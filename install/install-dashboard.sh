@@ -22,7 +22,7 @@ PREVIOUS_DIR=""
 EXISTING_RELEASE=""
 STREAMER_SOURCE_DIR=""
 
-echo "Installing SvxLink-Dash-V4.0..."
+echo "Installing SvxLink-Tetra-Dash (V4.1 base)..."
 
 SOURCE_ORIGIN=""
 
@@ -48,10 +48,11 @@ if [ -f "$SOURCE_DIR/.git/config" ]; then
 fi
 
 case "$SOURCE_ORIGIN" in
-    *"/SvxLink-Dash-V4.0.git"|*"/SvxLink-Dash-V4.0")
+    *"/SvxLink-Dash-V4.0.git"|*"/SvxLink-Dash-V4.0"|\
+    *"/SvxLink-Dash-V4.1.git"|*"/SvxLink-Dash-V4.1")
         ;;
     *)
-        echo "ERROR: The installer source is not a recognised V4.0 checkout." >&2
+        echo "ERROR: The installer source is not a recognised V4.x checkout." >&2
         echo "Source: $SOURCE_DIR" >&2
         echo "Origin: ${SOURCE_ORIGIN:-not detected}" >&2
         exit 1
@@ -89,6 +90,9 @@ if [ -e "$INSTALL_DIR" ]; then
         *"/SvxLink-Dash-V4.0.git"|*"/SvxLink-Dash-V4.0")
             EXISTING_RELEASE="V4.0"
             ;;
+        *"/SvxLink-Dash-V4.1.git"|*"/SvxLink-Dash-V4.1")
+            EXISTING_RELEASE="V4.1"
+            ;;
         *)
             echo "ERROR: Unrecognised existing dashboard installation." >&2
             echo "Directory: $INSTALL_DIR" >&2
@@ -104,6 +108,34 @@ apt update
 apt install -y git python3 python3-flask python3-jinja2 python3-werkzeug sox device-tree-compiler gpiod python3-libgpiod
 if [ ! -d /opt ]; then
     mkdir -p /opt
+fi
+
+# Disable the legacy gpiochip4 compatibility alias when present.
+GPIOCHIP4_RULE_FOUND=0
+
+for GPIOCHIP4_RULE_DIR in \
+    /etc/udev/rules.d \
+    /run/udev/rules.d \
+    /usr/lib/udev/rules.d \
+    /lib/udev/rules.d
+do
+    if [ -f "$GPIOCHIP4_RULE_DIR/60-gpiochip4.rules" ]; then
+        GPIOCHIP4_RULE_FOUND=1
+    fi
+done
+
+if [ "$GPIOCHIP4_RULE_FOUND" -eq 1 ]; then
+    echo "Disabling the legacy gpiochip4 compatibility rule..."
+    install -d -m 0755 /etc/udev/rules.d
+    ln -sfn /dev/null /etc/udev/rules.d/60-gpiochip4.rules
+    udevadm control --reload-rules
+
+    # Remove only the compatibility symlink, never a real GPIO device.
+    if [ -L /dev/gpiochip4 ] && \
+       [ "$(readlink -f /dev/gpiochip4)" = "/dev/gpiochip0" ]; then
+        rm -- /dev/gpiochip4
+        echo "Removed /dev/gpiochip4 alias to gpiochip0."
+    fi
 fi
 
 #-----------------------
@@ -141,7 +173,7 @@ STREAMER_SOURCE_DIR=""
 
 echo "Svxlink-Streamer installed."
 
-echo "Preparing a clean SvxLink-Dash V4.0 application tree..."
+echo "Preparing a clean SvxLink-Dash V4.1 application tree..."
 
 git clone \
     --no-hardlinks \
@@ -183,12 +215,13 @@ if [ -n "$EXISTING_RELEASE" ]; then
 
     if ! mv "$STAGING_DIR" "$INSTALL_DIR"; then
         mv "$PREVIOUS_DIR" "$INSTALL_DIR"
-        echo "ERROR: Could not activate the V4.0 application tree." >&2
+        echo "ERROR: Could not activate the V4.1 application tree." >&2
         exit 1
     fi
 
-    if [ "$EXISTING_RELEASE" = "V4.0" ]; then
-        echo "Restoring the existing V4.0 runtime configuration."
+    if [ "$EXISTING_RELEASE" = "V4.0" ] ||
+       [ "$EXISTING_RELEASE" = "V4.1" ]; then
+        echo "Restoring the existing $EXISTING_RELEASE runtime configuration."
 
         for CONFIG_FILE in \
             node_model.json \
@@ -216,7 +249,7 @@ if [ -n "$EXISTING_RELEASE" ]; then
     else
         echo "The $EXISTING_RELEASE configuration remains available in:"
         echo "  $BACKUP_DIR"
-        echo "V4.0 will begin with a new guided configuration."
+        echo "The new dashboard will begin with a guided configuration."
     fi
 else
     mv "$STAGING_DIR" "$INSTALL_DIR"
@@ -336,7 +369,7 @@ elif [ -e "$SUDOERS_FILE" ] && [ ! -f "$SUDOERS_FILE" ]; then
 fi
 
 cat > "$SUDOERS_FILE" <<'EOF'
-# SvxLink-Dash-V4.0 controlled service permissions
+# SvxLink-Dash-V4.1 controlled service permissions
 
 svxlink ALL=(root) NOPASSWD: \
     /usr/bin/systemctl restart svxlink.service, \
@@ -446,6 +479,7 @@ chown root:root /etc/logrotate.d/svxlink
 
 cp "$INSTALL_DIR/install/svxlink-dash.service" /etc/systemd/system/svxlink-dash.service
 systemctl daemon-reload
+systemctl enable svxlink.service
 systemctl enable svxlink-dash
 systemctl restart svxlink-dash
 

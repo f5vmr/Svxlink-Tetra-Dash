@@ -58,7 +58,23 @@ enable_i2c() {
         } >> "$CONFIG"
     fi
 
-    modprobe i2c-dev || true
+    install -d \
+        -o root \
+        -g root \
+        -m 0755 \
+        /etc/modules-load.d
+
+    cat > /etc/modules-load.d/svxlink-dashboard-i2c.conf <<'EOF'
+i2c-dev
+EOF
+
+    chmod 0644 \
+        /etc/modules-load.d/svxlink-dashboard-i2c.conf
+
+    chown root:root \
+        /etc/modules-load.d/svxlink-dashboard-i2c.conf
+
+    modprobe i2c-dev
 
     echo "I2C enable request complete. Reboot recommended."
 }
@@ -151,35 +167,64 @@ configure_audio_boot() {
 
     START_MARKER="# BEGIN SvxLink-Dash ICS MCH audio"
     END_MARKER="# END SvxLink-Dash ICS MCH audio"
+    FE_START_MARKER="# BEGIN SvxLink-Dash ICS Fe-Pi audio"
+    FE_END_MARKER="# END SvxLink-Dash ICS Fe-Pi audio"
 
     if [ ! -f "$CONFIG" ]; then
         echo "ERROR: $CONFIG not found"
         exit 1
     fi
 
-    # Remove any existing managed block first
-    sed -i "/$START_MARKER/,/$END_MARKER/d" "$CONFIG"
-
+    # Validate before changing the boot configuration.
     case "$PROFILE" in
-        ics_4x|ics_8x)
-            cat >> "$CONFIG" <<EOF
-
-$START_MARKER
-dtparam=i2s=on
-$END_MARKER
-EOF
-            echo "ICS MCH audio boot overlays enabled for $PROFILE."
-            echo "Reboot required."
-            ;;
         ics_1x|ics_2x)
-            echo "ICS MCH audio boot overlays removed for $PROFILE."
-            echo "Reboot required if this changed the active boot configuration."
+            if [ ! -f "/boot/firmware/overlays/fe-pi-audio.dtbo" ]; then
+                echo "ERROR: /boot/firmware/overlays/fe-pi-audio.dtbo not found"
+                exit 1
+            fi
+            ;;
+        ics_4x|ics_8x)
             ;;
         *)
             echo "ERROR: Invalid ICS profile for audio boot configuration: $PROFILE"
             exit 1
             ;;
     esac
+
+    # Remove previous managed audio settings.
+    sed -i "/$START_MARKER/,/$END_MARKER/d" "$CONFIG"
+    sed -i "/$FE_START_MARKER/,/$FE_END_MARKER/d" "$CONFIG"
+
+    # Remove standalone Fe-Pi entries to prevent duplicates or conflicts
+    # when changing the selected board.
+    sed -i -E \
+        '/^[[:space:]]*dtoverlay=fe-pi-audio([[:space:],#]|$)/d' \
+        "$CONFIG"
+
+    case "$PROFILE" in
+        ics_4x|ics_8x)
+            cat >> "$CONFIG" <<EOF
+
+[all]
+$START_MARKER
+dtparam=i2s=on
+$END_MARKER
+EOF
+            echo "ICS MCH audio boot overlays enabled for $PROFILE."
+            ;;
+        ics_1x|ics_2x)
+            cat >> "$CONFIG" <<EOF
+
+[all]
+$FE_START_MARKER
+dtoverlay=fe-pi-audio
+$FE_END_MARKER
+EOF
+            echo "Fe-Pi SGTL5000 audio boot overlay enabled for $PROFILE."
+            ;;
+    esac
+
+    echo "Reboot required before soundcard discovery."
 }
 configure_pcm1803_service() {
     PROFILE="$1"
@@ -215,6 +260,23 @@ configure_pcm1803_service() {
             systemctl stop "$SERVICE" 2>/dev/null || true
             systemctl disable "$SERVICE" 2>/dev/null || true
             echo "PCM1803 service disabled for this profile."
+
+            if ! command -v amixer >/dev/null 2>&1; then
+                echo "ERROR: amixer is missing. Install alsa-utils."
+                exit 1
+            fi
+
+            if ! command -v alsactl >/dev/null 2>&1; then
+                echo "ERROR: alsactl is missing. Install alsa-utils."
+                exit 1
+            fi
+
+            echo "Selecting Fe-Pi line input for $PROFILE..."
+            amixer -c Audio set 'Capture Mux' LINE_IN
+
+            echo "Saving Fe-Pi mixer settings..."
+            alsactl store Audio
+            echo "Fe-Pi line input configured and mixer settings saved."
             ;;
 
         *)
@@ -285,4 +347,3 @@ case "$1" in
         exit 1
         ;;
 esac
-

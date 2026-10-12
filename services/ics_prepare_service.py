@@ -38,6 +38,33 @@ VALID_ICS_PROFILES = {
 
 def _run_helper(*args):
     cmd = ["sudo", "-n", ICS_HELPER, *args]
+    source = (
+        Path(__file__).resolve().parent.parent
+        / "install"
+        / "svxlink_dashboard_ics_prepare"
+    )
+
+    try:
+        if source.read_bytes() != Path(ICS_HELPER).read_bytes():
+            return {
+                "ok": False,
+                "returncode": 1,
+                "stdout": "",
+                "stderr": (
+                    "The installed ICS preparation helper is outdated. "
+                    "Run the dashboard installer again to update it, "
+                    "then return to ICS preparation."
+                ),
+                "command": " ".join(cmd),
+            }
+    except OSError as exc:
+        return {
+            "ok": False,
+            "returncode": 1,
+            "stdout": "",
+            "stderr": f"Unable to verify the ICS preparation helper: {exc}",
+            "command": " ".join(cmd),
+        }
 
     result = subprocess.run(
         cmd,

@@ -90,6 +90,41 @@ class ReceiverStandardSqlRenderingTests(
     unittest.TestCase
 ):
 
+    def test_multiport_native_gpio_cos_is_rendered(self):
+        model = {
+            "sql_tail_elim": 270,
+        }
+        node = {
+            "audio": {
+                "rx_audio": "alsa:rx1",
+                "deemphasis": False,
+            },
+            "squelch": {
+                "method": "gpiod",
+                "ctcss_freq": None,
+            },
+            "gpio": {
+                "cos_chip": "gpiochip0",
+                "cos_line": 26,
+                "cos_invert": False,
+            },
+        }
+
+        rendered = render_port_rx_section(
+            model,
+            "1",
+            node,
+        )
+
+        self.assertIn(
+            "SQL_GPIOD_CHIP=gpiochip0",
+            rendered,
+        )
+        self.assertIn(
+            "SQL_GPIOD_LINE=26",
+            rendered,
+        )
+
     def test_selected_standard_detector_is_rendered(self):
         expected = {
             "hidraw": "SQL_DET=HIDRAW",

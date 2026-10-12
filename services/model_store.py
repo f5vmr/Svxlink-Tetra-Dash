@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Node model persistence for SvxLink Dashboard V4.0.
+Node model persistence for SvxLink Dashboard V4.1.
 """
 
 import json

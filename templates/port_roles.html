@@ -2,7 +2,7 @@
 <html lang="en" class="light-theme">
 <head>
     <meta charset="UTF-8">
-    <title>Port Roles - SvxLink-Dash-V4.0</title>
+    <title>Port Roles - {{ version_info.dashboard_name }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
     <link rel="icon" href="{{ url_for('static', filename='svxlink.ico') }}">
 </head>
@@ -44,7 +44,20 @@
                     <div class="status-box">
                         <strong>Port {{ port }}</strong><br>
                         <span>Audio: rx{{ port }} / tx{{ port }}</span><br>
-                        <span>GPIO: RX_{{ port }}, TX_{{ port }}, CT_{{ port }}, EN_{{ port }}</span>
+                        {% set profile_id = model.get("hardware_profile_id", "") %}
+
+                        {% if profile_id in ("ics_1x", "ics_2x") %}
+                            {% if port|string == "1" %}
+                                <span>GPIO: GPIO26, TX_{{ port }}</span>
+                            {% elif profile_id == "ics_2x" and port|string == "2" %}
+                                <span>GPIO: GPIO23, TX_{{ port }}</span>
+                            {% endif %}
+                        {% else %}
+                            <span>
+                                GPIO: RX_{{ port }}, TX_{{ port }},
+                                CT_{{ port }}, EN_{{ port }}
+                            </span>
+                        {% endif %}
 
                         <div style="margin-top: 0.75rem;">
                             <label>
@@ -78,6 +91,10 @@
                     <a class="button-secondary"
                        href="{{ url_for('timezone_page') }}">Back</a>
                 {% endif %}
+                <button class="button-primary"
+                        type="submit">
+                    Save roles and continue
+                </button>
             </div>
         </form>
     </section>
@@ -85,7 +102,7 @@
     <footer class="site-footer">
         SvxLink Software &copy; Tobias Blomberg SM0SVX<br>
         SvxLink Configurator and Dashboard &copy; Chris Jackson G4NAB<br>
-        SvxLink-Dash-V4.0 |
+        {{ version_info.dashboard_name }} |
         SvxLink Package {{ version_info.package }} |
         SvxLink {{ version_info.engine }}
     </footer>

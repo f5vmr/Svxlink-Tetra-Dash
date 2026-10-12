@@ -1,0 +1,12 @@
+{% set cos_method = node.get("squelch", {}).get("method", "gpiod") %}
+{% if not node.get("squelch_configured", False) %}
+    Not configured
+{% elif cos_method == "gpiod" %}
+    {{ "Active Low" if node.get("gpio", {}).get("cos_invert", False) else "Active High" }}
+{% elif cos_method == "hidraw" %}
+    {{ "Active Low" if node.get("hidraw", {}).get("sql_invert", False) else "Active High" }}
+{% elif cos_method == "serial" %}
+    {{ "Active Low" if node.get("serial", {}).get("sql_invert", False) else "Active High" }}
+{% else %}
+    Not applicable ({{ cos_method|upper }})
+{% endif %}

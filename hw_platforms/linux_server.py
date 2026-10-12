@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Generic Linux server platform profile for SvxLink-Dash-V4.0.
+Generic Linux server platform profile for SvxLink-Dash-V4.1.
 """
 
 PROFILE = {

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-DTMF control helper for SvxLink-Dash-V4.0.
+DTMF control helper for SvxLink-Dash-V4.1.
 
 Writes DTMF command strings to the SvxLink control PTY selected
 for the current node type.

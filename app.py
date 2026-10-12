@@ -1188,8 +1188,7 @@ def ics_prepare_page():
                 else:
                     message = (
                         message
-                        or "ICS GPIO lines discovered. PCM1803 service disabled for this profile."
-                    )
+                        or "ICS GPIO lines discovered and Fe-Pi line input configured."                    )
 
         except Exception as exc:
             error = f"GPIOD discovery failed: {exc}"
@@ -1484,6 +1483,11 @@ def initialise_port_nodes(model, profile):
             [],
         )
         node.setdefault("audio", {})
+
+        if profile.get("profile_id") in ("ics_1x", "ics_2x"):
+            for audio_key in ("rx_audio", "tx_audio"):
+                if not node["audio"].get(audio_key):
+                    node["audio"][audio_key] = mapping.get(audio_key)
 
         if discovered_usb:
             node["audio"]["rx_audio"] = mapping.get(
@@ -2292,6 +2296,17 @@ def port_squelch_detail_page(port_id):
             )
 
             save_node_model(model)
+
+            if (
+                request.form.get("reconfigure") == "1"
+                and request.form.get("return_to") != "topology"
+            ):
+                return redirect(
+                    url_for(
+                        "port_squelch_page",
+                        reconfigure="1",
+                    )
+                )
 
             return (
                 redirect_after_port_configuration(
@@ -4716,6 +4731,7 @@ def modules_page():
         str(port)
         for port in model.get("ports", {}).get("enabled", [])
     ]
+
     single_tetra = (
         enabled_ports == ["1"]
         and model.get("nodes", {}).get("1", {}).get("role") == "tetra"

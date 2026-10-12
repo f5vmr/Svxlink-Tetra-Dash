@@ -2,7 +2,7 @@
 <html lang="en" class="light-theme">
 <head>
     <meta charset="UTF-8">
-    <title>ICS Hardware Preparation - SvxLink-Dash-V4.0</title>
+    <title>ICS Hardware Preparation - {{ version_info.dashboard_name }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
     <link rel="icon" href="{{ url_for('static', filename='svxlink.ico') }}">
 </head>
@@ -144,7 +144,8 @@
                 <div class="note">
                     Use <strong>Enable I²C</strong> only if I²C is not already available.
                     Use <strong>Apply Selected ICS Overlay</strong> after selecting the correct
-                    board profile. A reboot is required after applying an overlay.
+                    board profile. This also enables the built-in soundcard on ICS 1X and 2X.
+                    A reboot is required before the soundcard can be detected.
                 </div>
 
                 <div class="button-row">
@@ -274,7 +275,7 @@
     <footer class="site-footer">
         SvxLink Software &copy; Tobias Blomberg SM0SVX<br>
         SvxLink Configurator and Dashboard &copy; Chris Jackson G4NAB<br>
-        SvxLink-Dash-V4.0 |
+        {{ version_info.dashboard_name }} |
         SvxLink Package {{ version_info.package }} |
         SvxLink {{ version_info.engine }}
     </footer>

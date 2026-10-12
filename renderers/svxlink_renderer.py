@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Primary SvxLink configuration renderer for SvxLink-Dash-V4.0.
+Primary SvxLink configuration renderer for SvxLink-Dash-V4.1.
 """
 from models.node_model import (
     get_installation_tones,

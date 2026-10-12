@@ -1,10 +1,10 @@
-# SvxLink-Dash V4.0
+# SvxLink-Dash V4.1
 
-SvxLink-Dash V4.0 is a Flask-based configuration and runtime dashboard for SvxLink 26.05.1.
+SvxLink-Dash V4.1 is a Flask-based configuration and runtime dashboard for SvxLink 26.05.2 and its predecessor.
 
 It provides a guided environment for configuring, building and operating simplex, repeater and multi-port SvxLink installations. It is suitable for independently operated nodes and is not restricted to a particular reflector network, region or deployment model.
 
-SvxLink 26.05.1 is developed by Tobias Blomberg, SM0SVX.
+SvxLink 26.05.2 is developed by Tobias Blomberg, SM0SVX.
 
 ## Principal features
 
@@ -29,7 +29,7 @@ SvxLink 26.05.1 is developed by Tobias Blomberg, SM0SVX.
 
 ## Intended installations
 
-SvxLink-Dash V4.0 is intended for:
+SvxLink-Dash V4.1 is intended for:
 
 - New or existing SvxLink operators who require guided configuration.
 - Appliance-style installations using Raspberry Pi or NanoPi Neo hardware.
@@ -108,7 +108,7 @@ Runtime architecture reporting recognises:
 - 32-bit x86 (`i386`; tested on `i686`)
 - 64-bit x86 (`amd64`)
 
-The dashboard is intended for Debian-based operating systems on which SvxLink 26.05.1 is already installed and operational.
+The dashboard is intended for Debian-based operating systems on which SvxLink 26.05.2 is already installed and operational.
 
 Platform recognition and hardware-profile support are separate. Not every hardware profile is appropriate for every platform.
 
@@ -272,7 +272,7 @@ receiver's ordinary squelch-access condition.
 
 ## Installation
 
-SvxLink-Bootstrap is the recommended installation method. It prepares a supported SvxLink 26.05.1 installation, installs SvxLink-Dash V4.0 and hands control to the permanent Dashboard configuration workflow.
+SvxLink-Bootstrap is the recommended installation method. It prepares a supported SvxLink 26.05.2 installation, installs SvxLink-Dash V4.1 and hands control to the permanent Dashboard configuration workflow.
 
 ### Recommended Bootstrap installation
 
@@ -294,7 +294,7 @@ Bootstrap then:
 
 1. Detects the operating system, release, architecture and hardware platform.
 
-2. Selects the exact compatible SvxLink 26.05.1 package.
+2. Selects the exact compatible SvxLink  package.
 
 3. Classifies any existing package-managed or compiler installation.
 
@@ -304,7 +304,7 @@ Bootstrap then:
 
 6. Installs and verifies SvxLink.
 
-7. Obtains SvxLink-Dash V4.0 and runs its established installer.
+7. Obtains SvxLink-Dash V4.1 and runs its established installer.
 
 8. Opens the permanent Dashboard configuration workflow.
 
@@ -324,11 +324,11 @@ Complete Bootstrap installation, migration, compatibility and troubleshooting do
 
 ### Direct Dashboard installation
 
-Direct installation is intended for systems where SvxLink 26.05.1 has already been installed correctly or for development and recovery work.
+Direct installation is intended for systems where SvxLink 26.05.2 has already been installed correctly or for development and recovery work.
 
 Before using the direct installer, confirm that:
 
-* SvxLink 26.05.1 is installed.
+* SvxLink 26.05.2 or a previous version is installed.
 
 * `svxlink.service` is available.
 
@@ -348,9 +348,9 @@ Clone the repository into a temporary directory and run the executable installer
 cd /tmp
 
 git clone \
-https://github.com/f5vmr/SvxLink-Dash-V4.0.git
+https://github.com/f5vmr/SvxLink-Dash-V4.1.git
 
-cd SvxLink-Dash-V4.0
+cd SvxLink-Dash-V4.1
 
 sudo ./install/install-dashboard.sh
 ```
@@ -455,7 +455,7 @@ SvxLink-Bootstrap remains the recommended route when preparing or migrating
 the complete appliance. It checks and prepares SvxLink before running the
 Dashboard installer.
 
-For a direct Dashboard update, run the installer from a current temporary V4.0
+For a direct Dashboard update, run the installer from a current temporary V4.1
 clone. The installer deploys that checkout as a clean application tree; it does
 not run `git pull` inside `/opt/dashboard`.
 
@@ -464,7 +464,7 @@ package installation or file replacement. The installer recognises:
 
 * SvxLink-Dash V3.0
 * SvxLink-Dash V3.1
-* SvxLink-Dash V4.0
+* SvxLink-Dash V4.1
 
 An existing directory with an absent or unrecognised Git origin is refused and
 left unchanged.
@@ -480,10 +480,10 @@ Each backup uses a timestamp, detected release and process identifier. The
 existing Dashboard service is stopped only after the backup has completed and
 been verified.
 
-The new V4.0 application tree is prepared separately and then moved into
+The new V4.1 application tree is prepared separately and then moved into
 `/opt/dashboard`. If that activation fails, the previous tree is immediately
 returned to its original location. The temporary previous tree is removed only
-after the V4.0 service has restarted successfully.
+after the V4.1 service has restarted successfully.
 
 The installer then refreshes permissions, helper programs, service files and
 supporting installation resources, reloads systemd, enables
@@ -491,7 +491,7 @@ supporting installation resources, reloads systemd, enables
 
 ### V3.0 and V3.1 replacement
 
-V3.0 and V3.1 installations are replaced with a clean V4.0 application tree.
+V3.0 and V3.1 installations are replaced with a clean V4.1 application tree.
 Their complete application directory and saved data remain available in the
 timestamped backup beneath `/var/backups/svxlink-dash`.
 
@@ -506,9 +506,9 @@ Dashboard application tree and is not removed merely by replacing the
 Dashboard. A later V4 build may deliberately replace Dashboard-managed
 SvxLink files after validation and its normal configuration backup.
 
-### V4.0 configuration preservation during updates
+### V4.0 and V4.1 configuration preservation during updates
 
-When an existing V4.0 installation is updated, the installer restores these
+When an existing V4.0 or V4.1 installation is updated, the installer restores these
 runtime files from the verified application backup when they exist:
 
 ```text
@@ -1414,7 +1414,7 @@ configuration format or service model.
 
 ## Reflector configuration and security
 
-SvxLink-Dash V4.0 supports four distinct reflector routes:
+SvxLink-Dash V4.1 supports four distinct reflector routes:
 
 * No reflector
 * Federation Family reflector using Protocol 2
@@ -1535,7 +1535,7 @@ SvxLink-Dash supports one `ReflectorLogic` and one reflector destination within 
 
 ## Scope limitations
 
-The initial SvxLink-Dash V4.0 release does not provide guided configuration for:
+The initial SvxLink-Dash V4.1 release does not provide guided configuration for:
 
 * Browser audio streaming
 * Complete RemoteTrx deployment
@@ -1554,15 +1554,15 @@ A dashboard Rebuild can overwrite manual changes made to dashboard-managed files
 
 ## Credits
 
-SvxLink 26.05.1 is developed by Tobias Blomberg, SM0SVX.
+SvxLink 26.05.2 is developed by Tobias Blomberg, SM0SVX.
 
-SvxLink-Dash V4.0 is developed by Chris Jackson, G4NAB.
+SvxLink-Dash V4.1 is developed by Chris Jackson, G4NAB.
 
 Additional assistance with Python, Flask, configuration rendering, testing, debugging and documentation was provided through ChatGPT by OpenAI.
 
 ## Licence
 
-SvxLink-Dash V4.0 is free software distributed under the GNU General Public License version 3.
+SvxLink-Dash V4.1 is free software distributed under the GNU General Public License version 3.
 
 You may use, modify and redistribute it under the terms contained in the repository’s [`LICENSE`](LICENSE) file.
 

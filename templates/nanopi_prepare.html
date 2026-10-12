@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>NanoPi Preparation - SvxLink-Dash-V4.0</title>
+    <title>NanoPi Preparation - {{ version_info.dashboard_name }}</title>
     <link
         rel="stylesheet"
         href="{{ url_for('static', filename='site.css') }}"
@@ -251,7 +251,7 @@
 
     <footer class="site-footer">
         SvxLink Software &copy; Tobias Blomberg SM0SVX<br>
-        SvxLink-Dash V4.0 &copy; Chris Jackson G4NAB<br>
+        {{ version_info.dashboard_name }} &copy; Chris Jackson G4NAB<br>
         SvxLink Package {{ version_info.package }} |
         SvxLink {{ version_info.engine }}
     </footer>

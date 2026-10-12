@@ -2,7 +2,7 @@
 <html lang="en" class="light-theme">
 <head>
     <meta charset="UTF-8">
-    <title>Port Configuration - SvxLink-Dash-V4.0</title>
+    <title>Port Configuration - {{ version_info.dashboard_name }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
     <link rel="icon" href="{{ url_for('static', filename='svxlink.ico') }}">
 </head>
@@ -47,8 +47,8 @@
                     <br>
                     RX audio: {{ mapping.get("rx_audio", "not mapped") }}<br>
                     TX audio: {{ mapping.get("tx_audio", "not mapped") }}<br>
-                    PTT: {{ mapping.get("ptt", "not mapped") }} |
-                    COS: {{ mapping.get("cos", "not mapped") }}
+                    PTT mapping: {{ mapping.get("ptt") or "Not mapped" }} |
+                    COS mapping: {{ mapping.get("cos") or "Not mapped" }}
                 </div>
             {% endfor %}
         </div>
@@ -76,8 +76,8 @@
                         <br>
                         RX audio: {{ node.get("audio", {}).get("rx_audio", "Not set") }}<br>
                         TX audio: {{ node.get("audio", {}).get("tx_audio", "Not set") }}<br>
-                        PTT: {{ node.gpio.ptt }}<br>
-                        COS: {{ node.gpio.cos }}<br>
+                        PTT: {% include "config/port_ptt_summary.html" %}<br>
+                        COS: {% include "config/port_cos_summary.html" %}<br>
                         Configured:
                         {% if node.node_details_configured %}
                             <span class="success-text">Partly</span>
@@ -140,7 +140,7 @@
     <footer class="site-footer">
         SvxLink Software &copy; Tobias Blomberg SM0SVX<br>
         SvxLink Configurator and Dashboard &copy; Chris Jackson G4NAB<br>
-        SvxLink-Dash-V4.0 |
+        {{ version_info.dashboard_name }} |
         SvxLink Package {{ version_info.package }} |
         SvxLink {{ version_info.engine }}
     </footer>

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-node_info.json renderer for SvxLink-Dash-V4.0.
+node_info.json renderer for SvxLink-Dash-V4.1.
 """
 
 import json

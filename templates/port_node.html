@@ -2,7 +2,7 @@
 <html lang="en" class="light-theme">
 <head>
     <meta charset="UTF-8">
-    <title>Port {{ port_id }} Node Details - SvxLink-Dash-V4.0</title>
+    <title>Port {{ port_id }} Node Details - {{ version_info.dashboard_name }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
     <link rel="icon" href="{{ url_for('static', filename='svxlink.ico') }}">
 </head>
@@ -75,8 +75,8 @@
                 <div class="status-box">
                     RX audio: {{ node.get("audio", {}).get("rx_audio", "Not set") }}<br>
                     TX audio: {{ node.get("audio", {}).get("tx_audio", "Not set") }}<br>
-                    PTT: {{ node.gpio.ptt }}<br>
-                    COS: {{ node.gpio.cos }}
+                    PTT: {% include "config/port_ptt_summary.html" %}<br>
+                    COS: {% include "config/port_cos_summary.html" %}
                 </div>
             </div>
             <div class="form-section">
@@ -139,7 +139,7 @@
     <footer class="site-footer">
         SvxLink Software &copy; Tobias Blomberg SM0SVX<br>
         SvxLink Configurator and Dashboard &copy; Chris Jackson G4NAB<br>
-        SvxLink-Dash-V4.0 |
+        {{ version_info.dashboard_name }} |
         SvxLink Package {{ version_info.package }} |
         SvxLink {{ version_info.engine }}
     </footer>

@@ -2,7 +2,7 @@
 <html lang="en" class="light-theme">
 <head>
     <meta charset="UTF-8">
-    <title>SvxLink-Dash-V4.0 Setup</title>
+    <title>{{ version_info.dashboard_name }} Setup</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
     <link rel="icon" href="{{ url_for('static', filename='svxlink.ico') }}">
 </head>
@@ -12,7 +12,7 @@
         <div class="page-header">
             <img class="page-icon" src="{{ url_for('static', filename='svxlink.ico') }}" alt="SvxLink icon">
             <div class="page-heading">
-                <h1>SvxLink-Dash-V4.0</h1>
+                <h1>{{ version_info.dashboard_name }}</h1>
                 <p>Select the type of SvxLink system you are building.</p>
             </div>
         </div>
@@ -77,7 +77,7 @@
     <footer class="site-footer">
         SvxLink Software &copy; Tobias Blomberg SM0SVX<br>
         SvxLink Configurator and Dashboard &copy; Chris Jackson G4NAB<br>
-        SvxLink-Dash-V4.0 |
+        {{ version_info.dashboard_name }} |
         SvxLink Package {{ version_info.package }} |
         SvxLink {{ version_info.engine }}
     </footer>

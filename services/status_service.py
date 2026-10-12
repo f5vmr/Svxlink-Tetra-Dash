@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Runtime monitoring helpers for SvxLink-Dash-V4.0.
+Runtime monitoring helpers for SvxLink-Dash-V4.1.
 
 Read-only status collection only.
 No control functions belong here.
@@ -112,6 +112,14 @@ def get_radio_state(selected_port="1"):
         RX/input state is detected from Rx1 squelch messages.
         """
 
+        if svxlink_status() != "active":
+            return {
+                "label": "Stopped",
+                "input": "Unknown",
+                "class": "radio-standby",
+                "tx": False,
+                "rx": False,
+            }
         tx_active = False
         rx_open = False
         selected_port = str(selected_port or "1")
@@ -119,6 +127,16 @@ def get_radio_state(selected_port="1"):
         tx_name = f"tx{selected_port}:"
 
         lines = read_recent_svxlink_log_lines(300)
+        # Ignore radio activity from an earlier SvxLink run.
+        for index in range(len(lines) - 1, -1, -1):
+            lower = lines[index].lower()
+            if any(marker in lower for marker in (
+                "notice: initialization done. starting main application",
+                "notice: sigterm received. shutting down application",
+                "notice: exiting",
+            )):
+                lines = lines[index + 1:]
+                break
 
         if not lines:
             return {

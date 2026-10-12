@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-GPIO line helper for SvxLink-Dash-V4.0.
+GPIO line helper for SvxLink-Dash-V4.1.
 """
 
 import json
@@ -332,6 +332,26 @@ def discover_named_gpio_lines(labels, refresh=True):
     return resolved, missing
 
 
+NATIVE_ICS_RX_LINES = {
+    "ics_1x": {
+        "1": {
+            "chip": "gpiochip0",
+            "line": 26,
+        },
+    },
+    "ics_2x": {
+        "1": {
+            "chip": "gpiochip0",
+            "line": 26,
+        },
+        "2": {
+            "chip": "gpiochip0",
+            "line": 23,
+        },
+    },
+}
+
+
 def required_ics_gpio_lines(model):
     """
     Return the GPIO line names required by the selected ICS profile.
@@ -351,7 +371,10 @@ def required_ics_gpio_lines(model):
 
     for port in enabled_ports:
         port_id = str(port)
-        labels.append(f"RX_{port_id}")
+
+        if profile_id not in NATIVE_ICS_RX_LINES:
+            labels.append(f"RX_{port_id}")
+
         labels.append(f"TX_{port_id}")
 
     if profile_id in ("ics_4x", "ics_8x"):
@@ -364,6 +387,19 @@ def update_model_gpiod_discovery(model):
     """
     Refresh GPIO discovery and store resolved GPIOD data in node_model.
     """
+
+    hardware = model.get("hardware", {})
+
+    profile_id = (
+        model.get("hardware_profile_id")
+        or hardware.get("profile_id")
+        or hardware.get("id")
+    )
+
+    native_rx_lines = NATIVE_ICS_RX_LINES.get(
+        profile_id,
+        {},
+    )
 
     labels = required_ics_gpio_lines(model)
 
@@ -385,14 +421,21 @@ def update_model_gpiod_discovery(model):
         rx_label = f"RX_{port_id}"
         tx_label = f"TX_{port_id}"
 
-        rx = resolved.get(rx_label, {})
+        rx = (
+            native_rx_lines.get(port_id)
+            or resolved.get(rx_label, {})
+        )
         tx = resolved.get(tx_label, {})
 
         node.setdefault("gpio", {})
 
         node["gpio"]["cos_chip"] = rx.get("chip", "")
         node["gpio"]["cos_line"] = rx.get("line", rx_label)
-        node["gpio"]["cos_offset"] = rx.get("offset")
+
+        if "offset" in rx:
+            node["gpio"]["cos_offset"] = rx["offset"]
+        else:
+            node["gpio"].pop("cos_offset", None)
 
         node["gpio"]["ptt_chip"] = tx.get("chip", "")
         node["gpio"]["ptt_line"] = tx.get("line", tx_label)

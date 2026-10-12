@@ -64,7 +64,7 @@ def find_unavailable_metar_airports(codes, timeout=10):
     request = Request(
         f"{STATION_INFO_URL}?{query}",
         headers={
-            "User-Agent": "SvxLink-Dash-V4.0",
+            "User-Agent": "SvxLink-Dash-V4.1",
         },
     )
 

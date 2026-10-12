@@ -2,7 +2,7 @@
 <html lang="en" class="light-theme">
 <head>
     <meta charset="UTF-8">
-    <title>Port Squelch / CTCSS - SvxLink-Dash-V4.0</title>
+    <title>Port Squelch / CTCSS - {{ version_info.dashboard_name }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
     <link rel="icon" href="{{ url_for('static', filename='svxlink.ico') }}">
 </head>
@@ -38,7 +38,8 @@
                     Port: {{ node.port }}<br>
                     Callsign: {{ node.callsign }}<br>
                     Role: {{ node.role }}<br>
-                    COS: {{ node.gpio.cos }}<br>
+                    COS: {% include "config/port_cos_summary.html" %}<br>
+                    PTT: {% include "config/port_ptt_summary.html" %}<br>
 
                     {% if node.squelch_configured %}
                         Squelch source: {{ squelch.get("method", "gpiod") }}<br>
@@ -98,7 +99,7 @@
     <footer class="site-footer">
         SvxLink Software &copy; Tobias Blomberg SM0SVX<br>
         SvxLink Configurator and Dashboard &copy; Chris Jackson G4NAB<br>
-        SvxLink-Dash-V4.0 |
+        {{ version_info.dashboard_name }} |
         SvxLink Package {{ version_info.package }} |
         SvxLink {{ version_info.engine }}
     </footer>

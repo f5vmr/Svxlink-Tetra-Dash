@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import unittest
+from pathlib import Path
 from unittest.mock import mock_open, patch
 from html.parser import HTMLParser
 
@@ -32,6 +33,35 @@ class PreparationControls(HTMLParser):
 
 
 class IcsPreparationTests(unittest.TestCase):
+
+    def test_i2c_enablement_persists_i2c_dev_module(self):
+        helper_text = Path(
+            "install/svxlink_dashboard_ics_prepare"
+        ).read_text(encoding="utf-8")
+
+        module_file = (
+            "/etc/modules-load.d/"
+            "svxlink-dashboard-i2c.conf"
+        )
+
+        required_fragments = (
+            "dtparam=i2c_arm=on",
+            module_file,
+            "i2c-dev",
+            "chmod 0644",
+            "chown root:root",
+            "modprobe i2c-dev",
+        )
+
+        for fragment in required_fragments:
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, helper_text)
+
+        self.assertNotIn(
+            "modprobe i2c-dev || true",
+            helper_text,
+        )
+
     def render_controls(
         self, helper=True, overlay=False,
         verified=False, reboot=False,

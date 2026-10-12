@@ -1,0 +1,17 @@
+{% set ptt_method = node.get("interface", {}).get("ptt_source") %}
+{% set sql_method = node.get("squelch", {}).get("method", "gpiod") %}
+{% if model.get("hardware", {}).get("family") == "ics" %}
+    {% set ptt_method = "gpiod" %}
+{% elif ptt_method not in ["hidraw", "gpiod", "serial"] %}
+    {% set ptt_method = sql_method if sql_method in ["hidraw", "gpiod", "serial"] else "gpiod" %}
+{% endif %}
+
+{% if not node.get("squelch_configured", False) %}
+    Not configured
+{% elif ptt_method == "gpiod" %}
+    {{ "Active Low" if node.get("gpio", {}).get("ptt_invert", False) else "Active High" }}
+{% elif ptt_method == "hidraw" %}
+    {{ "Active Low" if node.get("hidraw", {}).get("ptt_invert", False) else "Active High" }}
+{% elif ptt_method == "serial" %}
+    Serial pins: {{ node.get("serial", {}).get("ptt_pin", "DTRRTS") }}
+{% endif %}

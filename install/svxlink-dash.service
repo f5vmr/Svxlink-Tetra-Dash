@@ -1,5 +1,5 @@
 [Unit]
-Description=SvxLink-Dash-V4.0 Web Configuration Dashboard
+Description=SvxLink-Dash-V4.1 Web Configuration Dashboard
 After=network.target svxlink.service
 Wants=network.target
 

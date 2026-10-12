@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-SvxLink-Dash-V4.0 node model.
+SvxLink-Dash-V4.1 node model.
 
 This file defines the authoritative configuration model used by:
 - Flask setup pages
